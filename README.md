@@ -30,7 +30,7 @@ http://godoc.org/github.com/medvednikov/ezweb
 ## Quick start ##
 
 ```go
-// run with 'go run examples/example.go' and visit http://localhost:8088/
+// run with 'go run examples/quickstart.go' and visit http://localhost:8088/
 package main
 
 import (
