@@ -47,7 +47,7 @@ The key features of ezweb are ease of use, lack of clutter, and a very simple wa
 actions and parameters without extra routing and configuration files: a function declaration is
 enough.
 
-Compare using net/http, Beego, and ezweb to implement a simple user search page:
+Compare using net/http, beego, and ezweb to implement a simple user search page:
 
 ```go
 // net/http
@@ -65,9 +65,10 @@ func main() {
 	http.HandleFunc("/UserSearch", userSearch)
 	http.ListenAndServe(":8088", nil)
 }
+```
 
-
-// Beego
+```go
+// beego
 func (this *MainController) Get() {
 	name := this.GetString("name")
 	age := int(this.GetInt("age"))
@@ -79,8 +80,9 @@ func main() {
 	beego.Router("/UserSearch", &MainController{})
 	beego.Run()
 }
+```
 
-
+```go
 // ezweb
 func (c *Home) UserSearch(name string, age int) {
 	user := usersRepo.FindByNameAndAge(name, age)
