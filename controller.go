@@ -273,6 +273,10 @@ func getActionAndArgsFromUri(uri string, isIndex bool) (string, []string) {
 		}
 	}
 
+	// Capitalize and remove unallowed characters
+	actionName = capitalize(actionName)
+	actionName = strings.Replace(actionName, ".", "", -1)
+
 	return actionName, qsArgs
 }
 
@@ -410,6 +414,14 @@ func dump(val interface{}) string {
 func toint(s string) int {
 	res, _ := strconv.Atoi(s)
 	return res
+}
+
+// capitalize capitalizes a string: 'test' => 'Test'
+func capitalize(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 func init() {
