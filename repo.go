@@ -38,8 +38,10 @@ func (r *Repo) Retrieve(result interface{}, id int) {
 // user = repo.Retrieve(1)
 // user.Age++
 // repo.Update(user)
-func (r *Repo) Update(u interface{}) {
-	r.dbmap.Update(u)
+func (r *Repo) Update(u interface{}) error {
+	_, err := r.dbmap.Update(u)
+	h(err)
+	return err
 }
 
 // SelectOne searches for a row using a given query and binds the result to a given object
