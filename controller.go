@@ -47,6 +47,8 @@ type Controller struct {
 	PageTitle string
 }
 
+type Form struct{}
+
 // Debug is used to determine how to display error messages. Default is true, set to false
 // when deploying. One of the easy ways to do that automatically is to parse machine's hostname.
 var Debug bool
@@ -324,26 +326,55 @@ func run(c interface{}, baseC *Controller) {
 
 	// Loop thru all method args and assign query string parameters to them
 	for i := 0; i < nrMethodArgs; i++ {
-		value := ""
+		stringValue := ""
+
 		// If there's no query string parameter for an arg, it will default to
 		// an empty string
 		if i < len(baseC.args) {
 			// Get value from query string, obviously the order has to be the same:
 			// register(name, password string) => /Register?name=a;password=b
 			// TODO allow any args order
-			value = baseC.args[i]
+			stringValue = baseC.args[i]
 		}
 
-		// Convert to int if this argument is an int, otherwise leave it as it string
-		// TODO more types?
-		if method.Type().In(i).Name() == "int" {
-			values = append(values, reflect.ValueOf(toint(value)))
-		} else {
-			values = append(values, reflect.ValueOf(value))
-		}
+		// Convert this argument to a value of a certain type (Form, string, int)
+		argType := method.Type().In(i)
+		values = append(values, baseC.argToValue(stringValue, argType))
 	}
 
 	method.Call(values)
+}
+
+// argToValue generates a reflect.Value from an argument type and its corresponding query string
+// or form value
+func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflect.Value {
+	// Handle a struct, this must be a form
+	if argType.Kind() == reflect.Struct {
+		// Create a new form object
+		newFormObj := reflect.New(argType).Elem()
+
+		// Set all its fields
+		for i := 0; i < argType.NumField(); i++ {
+			field := newFormObj.Field(i)
+			fieldName := argType.Field(i).Name // e.g. "Id", "Title"
+			formValue := c.Form[strings.ToLower(fieldName)]
+
+			if field.Type().Name() == "int" {
+				field.SetInt(int64(toint(formValue)))
+			} else {
+				field.SetString(formValue)
+			}
+		}
+
+		return newFormObj
+	} else if argType.Name() == "int" {
+		// Convert to int if this argument is an int, otherwise leave it as a string
+		// TODO more types?
+		return reflect.ValueOf(toint(stringValue))
+	} else {
+		return reflect.ValueOf(stringValue)
+	}
+	return reflect.Value{}
 }
 
 // parseTemplate parses a provided html template file and returns a *template.Template object
