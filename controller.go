@@ -39,8 +39,8 @@ type Controller struct {
 	// ControllerName is the name of the controller subtype
 	ControllerName string
 
-	// CustomTemplateFuncs defines extra html/template functions that can be run in all
-	// html templates used in this controller
+	// CustomTemplateFuncs defines extra html/template functions that can
+	// be run in all html templates used in this controller
 	CustomTemplateFuncs template.FuncMap
 
 	// PageTitle defines the title of the HTML page and is set in the action
@@ -49,12 +49,13 @@ type Controller struct {
 
 type Form struct{}
 
-// Debug is used to determine how to display error messages. Default is true, set to false
-// when deploying. One of the easy ways to do that automatically is to parse machine's hostname.
+// Debug is used to determine how to display error messages. Default is true,
+// set to false when deploying. One of the easy ways to do that automatically
+// is to parse machine's hostname.
 var Debug bool
 
-// GetHandler generates a net/http handler func from a controller making it handle all incoming
-// requests.
+// GetHandler generates a net/http handler func from a controller making it
+// handle all incoming requests.
 // Example:
 // http.HandleFunc("/Account/", ez.GetHandler(&AccountController{}))
 func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
@@ -94,8 +95,8 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 			beforeRun.Call([]reflect.Value{})
 		}
 
-		// Run the actual method. This can't be defined as type's method since it needs
-		// an interface{} for reflection
+		// Run the actual method. This can't be defined as type's
+		// method since it needs an interface{} for reflection
 		run(obj, &c)
 
 		// Run the 'after run' action if it exists
@@ -106,7 +107,8 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-// Route is a helper method that runs http.HandleFunc for a given path and controller
+// Route is a helper method that runs http.HandleFunc for a given path and
+// controller
 func Route(path string, controller interface{}) {
 	http.HandleFunc(path, GetHandler(controller))
 }
@@ -248,7 +250,8 @@ func (c *Controller) JsonRedirect(redirectUrl string) {
 
 //////// private methods ////////
 
-// getActionAndArgsFromUri fetches an action name and query string args that follow from uri:
+// getActionAndArgsFromUri fetches an action name and query string args that
+// follow from uri:
 // "AccountController/Settings" => "Settings", []
 // "Index" => "Index", []
 // "" => "Index", []
@@ -282,7 +285,8 @@ func getActionAndArgsFromUri(uri string, isIndex bool) (string, []string) {
 	return actionName, qsArgs
 }
 
-// initValues parses the http.Request object and fetches all necessary values for ezweb.Controller
+// initValues parses the http.Request object and fetches all necessary values
+// for ezweb.Controller
 func (c *Controller) initValues(w http.ResponseWriter, r *http.Request) {
 	c.Out = w
 	c.Request = r
@@ -328,16 +332,18 @@ func run(c interface{}, baseC *Controller) {
 	for i := 0; i < nrMethodArgs; i++ {
 		stringValue := ""
 
-		// If there's no query string parameter for an arg, it will default to
-		// an empty string
+		// If there's no query string parameter for an arg, it will
+		// default to an empty string
 		if i < len(baseC.args) {
-			// Get value from query string, obviously the order has to be the same:
-			// register(name, password string) => /Register?name=a;password=b
+			// Get value from query string, obviously the order has
+			// to be the same: register(name, password string) =>
+			// /Register?name=a;password=b
 			// TODO allow any args order
 			stringValue = baseC.args[i]
 		}
 
-		// Convert this argument to a value of a certain type (Form, string, int)
+		// Convert this argument to a value of a certain type (Form,
+		// string, int)
 		argType := method.Type().In(i)
 		values = append(values, baseC.argToValue(stringValue, argType))
 	}
@@ -345,8 +351,8 @@ func run(c interface{}, baseC *Controller) {
 	method.Call(values)
 }
 
-// argToValue generates a reflect.Value from an argument type and its corresponding query string
-// or form value
+// argToValue generates a reflect.Value from an argument type and its
+// corresponding query string or form value
 func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflect.Value {
 	// Handle a struct, this must be a form
 	if argType.Kind() == reflect.Struct {
@@ -357,7 +363,7 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 		for i := 0; i < argType.NumField(); i++ {
 			field := newFormObj.Field(i)
 			fieldName := argType.Field(i).Name // e.g. "Id", "Title"
-			formValue := c.Form[strings.ToLower(fieldName)]
+			formValue := c.Form[decapitalize(fieldName)]
 
 			if field.Type().Name() == "int" {
 				field.SetInt(int64(toint(formValue)))
@@ -368,8 +374,8 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 
 		return newFormObj
 	} else if argType.Name() == "int" {
-		// Convert to int if this argument is an int, otherwise leave it as a string
-		// TODO more types?
+		// Convert to int if this argument is an int, otherwise leave
+		// it as a string TODO more types?
 		return reflect.ValueOf(toint(stringValue))
 	} else {
 		return reflect.ValueOf(stringValue)
@@ -377,7 +383,8 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 	return reflect.Value{}
 }
 
-// parseTemplate parses a provided html template file and returns a *template.Template object
+// parseTemplate parses a provided html template file and returns a
+// *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	// Read layout.html
 	layout, err := ioutil.ReadFile("templates/layout.html")
@@ -438,6 +445,8 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	return t2, err
 }
 
+//////// helper functions////////
+
 func dump(val interface{}) string {
 	return fmt.Sprintf("%#v", val)
 }
@@ -453,6 +462,14 @@ func capitalize(s string) string {
 		return ""
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// decapitalize does the opposite of capitalize(): 'Test' => 'test'
+func decapitalize(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToLower(s[:1]) + s[1:]
 }
 
 func init() {
