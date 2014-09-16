@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Controller is the core type of ezweb
@@ -437,7 +438,8 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// Custom funcs
 	t := template.New(file).Funcs(template.FuncMap{
-		"eq": reflect.DeepEqual,
+		"eq":  reflect.DeepEqual,
+		"inc": func(n int) int { return n + 1 },
 		//"hex":  func(id bson.ObjectId) string { return id.Hex() },
 	}).Funcs(c.CustomTemplateFuncs)
 
