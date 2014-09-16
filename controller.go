@@ -180,8 +180,13 @@ func (c *Controller) GetCookie(key string) string {
 	return res.Value
 }
 
+// SetCookie creates a new cookie valid for 10 days
 func (c *Controller) SetCookie(key string, value string) {
-	http.SetCookie(c.Out, &http.Cookie{Name: key, Value: value})
+	http.SetCookie(c.Out, &http.Cookie{
+		Name:    key,
+		Value:   value,
+		Expires: time.Now().Add(10 * 24 * time.Hour),
+	})
 }
 
 func (c *Controller) DeleteCookie(key string) {
