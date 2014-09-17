@@ -3,9 +3,11 @@ package ezweb
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -13,15 +15,12 @@ import (
 	"time"
 )
 
+var _ = os.Create
+
 // Controller is the core type of ezweb
 type Controller struct {
 	Request *http.Request
 	Out     http.ResponseWriter
-
-	// args is a list of all query string values:
-	// example.com/?a=1&b=2 => []string{ "1", "2" }
-	// It's used only for mapping method arguments: func Index(a, b string) {}
-	args []string
 
 	// Params is a map of all query string key-vales:
 	// example.com/?a=1&b=2 => map[string]string{ "a":"1", "b":"2" }
@@ -50,10 +49,22 @@ type Controller struct {
 
 type Form struct{}
 
-// Debug is used to determine how to display error messages. Default is true,
-// set to false when deploying. One of the easy ways to do that automatically
-// is to parse machine's hostname.
-var Debug bool
+var (
+	// Debug is used to determine how to display error messages. Default is
+	// true, set to false when deploying. One of the easy ways to do that
+	// automatically is to parse machine's hostname.
+	Debug bool
+
+	// Gorilla router. Used for parsing url variables like /member/{id}
+	router *mux.Router
+
+	// A global map with all actions' argument names. They are fetched from
+	// the source files since it's impossible to get argument names via
+	// reflect. Example:
+	// func (c *Home) Register(name string, email string)
+	// ActionArgs["Home"]["Register"] = [ "name", "email" ]
+	ActionArgs map[string]map[string][]string
+)
 
 // GetHandler generates a net/http handler func from a controller making it
 // handle all incoming requests.
@@ -111,7 +122,16 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 // Route is a helper method that runs http.HandleFunc for a given path and
 // controller
 func Route(path string, controller interface{}) {
-	http.HandleFunc(path, GetHandler(controller))
+	if strings.Index(path, "{") == -1 {
+		// General routes without variables. Ensure Gorilla mux matches
+		// all children of path:
+		// Route("/", ...) will also math "/Register", "/User" etc
+		router.PathPrefix(path).HandlerFunc(GetHandler(controller))
+	} else {
+		// Custom routes with variables, no need to match children:
+		// Route("/member/{id}", ...)
+		router.HandleFunc(path, GetHandler(controller))
+	}
 }
 
 // Index defines a default action
@@ -256,31 +276,27 @@ func (c *Controller) JsonRedirect(redirectUrl string) {
 
 //////// private methods ////////
 
-// getActionAndArgsFromUri fetches an action name and query string args that
-// follow from uri:
-// "AccountController/Settings" => "Settings", []
-// "Index" => "Index", []
-// "" => "Index", []
-// "Home/Register" => "Register", []
-// "Forum/Topic/Hello-world/234242 => "Topic", []string{"Hello-world","234242"}
-func getActionAndArgsFromUri(uri string, isIndex bool) (string, []string) {
+// getActionFromUri fetches an action name from uri:
+// "AccountController/Settings" => "Settings"
+// "Index" => "Index"
+// "" => "Index"
+// "Home/Register" => "Register"
+// "Forum/Topic/Hello-world/234242 => "Topic"
+func getActionFromUri(uri string, isIndex bool) string {
 	// Root action
 	if uri == "" {
-		return "Index", []string{}
+		return "Index"
 	}
-	actionName := uri // example.com/Action
 
-	qsArgs := make([]string, 0)
+	actionName := uri // example.com/Action
 	values := strings.Split(uri, "/")
 
 	// http://example.com/Controller/Action/Arg1/Arg2
 	if len(values) > 1 { // TODO this is ugly
 		if isIndex {
 			actionName = values[0] // Save action, controller is skipped
-			qsArgs = values[1:]    // Save args
 		} else {
 			actionName = values[1]
-			qsArgs = values[2:]
 		}
 	}
 
@@ -288,7 +304,7 @@ func getActionAndArgsFromUri(uri string, isIndex bool) (string, []string) {
 	actionName = capitalize(actionName)
 	actionName = strings.Replace(actionName, ".", "", -1)
 
-	return actionName, qsArgs
+	return actionName
 }
 
 // initValues parses the http.Request object and fetches all necessary values
@@ -298,19 +314,20 @@ func (c *Controller) initValues(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	values := r.URL.Query()
 	c.Uri = r.URL.Path[1:]
-	actionName, qsArgs := getActionAndArgsFromUri(c.Uri, c.ControllerName == "Home")
+	actionName := getActionFromUri(c.Uri, c.ControllerName == "Home")
 	c.ActionName = actionName
 	c.PageTitle = ""
 
-	// Generate query string map
+	// Generate query string map (Params)
 	c.Params = make(map[string]string)
-	c.args = make([]string, 0)
 	for key, _ := range values {
 		c.Params[key] = values.Get(key)
-		c.args = append(c.args, values.Get(key))
 	}
-	// TODO assign routing values to c.Params
-	c.args = append(qsArgs, c.args...) // append extra args in /arg1/arg2
+
+	// Assign routing variables to Params
+	for key, value := range mux.Vars(r) {
+		c.Params[key] = value
+	}
 
 	// Generate form data
 	c.Form = make(map[string]string)
@@ -320,38 +337,29 @@ func (c *Controller) initValues(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// run fetches an action name from URI and launches the action
-func run(c interface{}, baseC *Controller) {
+// run starts controller's action
+func run(controllerObj interface{}, c *Controller) {
 	// Fetch the method (action) that needs to be run
-	method := reflect.ValueOf(c).MethodByName(baseC.ActionName)
+	method := reflect.ValueOf(controllerObj).MethodByName(c.ActionName)
 	if !method.IsValid() {
-		baseC.Write("Unknown action '" + baseC.ActionName +
-			"' (controller: '" + baseC.ControllerName + "')")
+		c.Write("Unknown action '" + c.ActionName +
+			"' (controller: '" + c.ControllerName + "')")
 		return
 	}
 
 	// Run it via reflect
-	nrMethodArgs := method.Type().NumIn()
 	values := make([]reflect.Value, 0)
 
 	// Loop thru all method args and assign query string parameters to them
-	for i := 0; i < nrMethodArgs; i++ {
-		stringValue := ""
-
-		// If there's no query string parameter for an arg, it will
-		// default to an empty string
-		if i < len(baseC.args) {
-			// Get value from query string, obviously the order has
-			// to be the same: register(name, password string) =>
-			// /Register?name=a;password=b
-			// TODO allow any args order
-			stringValue = baseC.args[i]
-		}
+	for i, argName := range ActionArgs[c.ControllerName][c.ActionName] {
+		// Get value from the query string (params)
+		// Register(name, password string) => /Register?name=a;password=b
+		stringValue := c.Params[argName]
 
 		// Convert this argument to a value of a certain type (Form,
 		// string, int)
 		argType := method.Type().In(i)
-		values = append(values, baseC.argToValue(stringValue, argType))
+		values = append(values, c.argToValue(stringValue, argType))
 	}
 
 	method.Call(values)
@@ -433,7 +441,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// @func "param" (always starts with a small letter)
 	// ===> {{ func "param" }}
-	r = regexp.MustCompile(`@([a-z]+ "[^"]+")`)
+	r = regexp.MustCompile(`@([a-z]+( "[^"]+")*)`)
 	s = r.ReplaceAllString(s, "{{ $1 }}")
 
 	// $translation_tag
@@ -445,11 +453,83 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	t := template.New(file).Funcs(template.FuncMap{
 		"eq":  reflect.DeepEqual,
 		"inc": func(n int) int { return n + 1 },
-		//"hex":  func(id bson.ObjectId) string { return id.Hex() },
 	}).Funcs(c.CustomTemplateFuncs)
 
 	t2, err := t.Parse(s)
 	return t2, err
+}
+
+// getActionsFromSourceFiles parses all controller source files and fetches
+// data about action functions
+func getActionsFromSourceFiles() {
+	if !Debug {
+		return
+	}
+
+	ActionArgs = make(map[string]map[string][]string, 0)
+
+	files, _ := ioutil.ReadDir("./")
+	for _, file := range files {
+		if strings.Index(file.Name(), "-controller.go") > -1 {
+			getActionsFromSourceFile(file.Name())
+		}
+	}
+}
+
+func getActionsFromSourceFile(sourceFile string) {
+	b, err := ioutil.ReadFile(sourceFile)
+	handle(err)
+	source := string(b)
+
+	controllerName := capitalize(
+		strings.Replace(sourceFile, "-controller.go", "", -1))
+
+	ActionArgs[controllerName] = make(map[string][]string, 0)
+
+	// Search for "func (...) ActionName(...) {"
+	r := regexp.MustCompile(`func \([a-zA-Z]+ \*` + controllerName + `\) (.*?)\((.*?)*\) {`)
+
+	matches := r.FindAllStringSubmatch(source, -1)
+	for _, match := range matches {
+		functionName := match[1]
+		if functionName == "" {
+			continue
+		}
+		args := []string{}
+
+		// match[2] contains arguments (["a int", "b string"])
+		if len(match) > 2 && match[2] != "" {
+			args = strings.Split(match[2], ", ")
+
+			// Get rid of type (for now)
+			for i, arg := range args {
+				if arg == "" {
+					continue
+				}
+				args[i] = strings.Split(arg, " ")[0]
+			}
+		}
+		ActionArgs[controllerName][functionName] = args
+
+	}
+
+	out, err := os.Create("runner/autogen.go")
+
+	fmt.Fprintln(out, `
+	   // This file has been generated automatically. Do not modify it.
+	   package main
+
+	   import "github.com/medvednikov/ezweb"
+	   import "fmt"
+
+	   func init() {
+		if !ezweb.Debug {
+			ezweb.ActionArgs = `+dump(ActionArgs)+`
+		}
+	   }`)
+
+	out.Close()
+
 }
 
 //////// helper functions////////
@@ -479,6 +559,14 @@ func decapitalize(s string) string {
 	return strings.ToLower(s[:1]) + s[1:]
 }
 
+func handle(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func init() {
-	Debug = true
+	getActionsFromSourceFiles()
+	router = mux.NewRouter()
+	http.Handle("/", router)
 }
