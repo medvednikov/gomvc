@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-var _ = os.Create
-
 // Controller is the core type of ezweb
 type Controller struct {
 	Request *http.Request
@@ -53,10 +51,10 @@ var (
 	// Debug is used to determine how to display error messages. Default is
 	// true, set to false when deploying. One of the easy ways to do that
 	// automatically is to parse machine's hostname.
-	Debug bool
+	Debug bool = true
 
 	// Gorilla router. Used for parsing url variables like /member/{id}
-	router *mux.Router
+	router *mux.Router = mux.NewRouter()
 
 	// A global map with all actions' argument names. They are fetched from
 	// the source files since it's impossible to get argument names via
@@ -462,6 +460,9 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 // getActionsFromSourceFiles parses all controller source files and fetches
 // data about action functions
 func getActionsFromSourceFiles() {
+	// Parse files only on development box (when Debug is true). Production
+	// boxes should not have source files and the extra overhead. The
+	// actions are 'cached'.
 	if !Debug {
 		return
 	}
@@ -513,23 +514,20 @@ func getActionsFromSourceFile(sourceFile string) {
 
 	}
 
-	out, err := os.Create("runner/autogen.go")
-
+	// Cache actions data for production use
+	out, _ := os.Create("runner/autogen.go")
 	fmt.Fprintln(out, `
-	   // This file has been generated automatically. Do not modify it.
-	   package main
+// This file has been generated automatically. Do not modify it.
+package main
 
-	   import "github.com/medvednikov/ezweb"
-	   import "fmt"
+import "github.com/medvednikov/ezweb"
 
-	   func init() {
-		if !ezweb.Debug {
-			ezweb.ActionArgs = `+dump(ActionArgs)+`
-		}
-	   }`)
-
+func init() {
+if !ezweb.Debug {
+	ezweb.ActionArgs = `+dump(ActionArgs)+`
+}
+}`)
 	out.Close()
-
 }
 
 //////// helper functions////////
@@ -565,8 +563,9 @@ func handle(err error) {
 	}
 }
 
-func init() {
+func Start(port string, isDebug bool) {
+	Debug = isDebug
 	getActionsFromSourceFiles()
-	router = mux.NewRouter()
 	http.Handle("/", router)
+	http.ListenAndServe(port, nil)
 }
