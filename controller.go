@@ -45,8 +45,6 @@ type Controller struct {
 	PageTitle string
 }
 
-type Form struct{}
-
 var (
 	// Debug is used to determine how to display error messages. Default is
 	// true, set to false when deploying. One of the easy ways to do that
@@ -366,20 +364,24 @@ func run(controllerObj interface{}, c *Controller) {
 // argToValue generates a reflect.Value from an argument type and its
 // corresponding query string or form value
 func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflect.Value {
-	// Handle a struct, this must be a form
-	if argType.Kind() == reflect.Struct {
+	// Handle a struct pointer, this must be a form
+	if argType.Kind() == reflect.Ptr && argType.Elem().Kind() == reflect.Struct {
+		// Dereference the form
+		argType = argType.Elem()
+
 		// Create a new form object
-		newFormObj := reflect.New(argType).Elem()
+		newFormObj := reflect.New(argType)
 
 		// Set all its fields
 		for i := 0; i < argType.NumField(); i++ {
-			field := newFormObj.Field(i)
+			field := newFormObj.Elem().Field(i)
 			fieldName := argType.Field(i).Name // e.g. "Id", "Title"
 			formValue := c.Form[decapitalize(fieldName)]
 
-			if field.Type().Name() == "int" {
+			switch field.Type().Name() {
+			case "int":
 				field.SetInt(int64(toint(formValue)))
-			} else {
+			case "string":
 				field.SetString(formValue)
 			}
 		}
