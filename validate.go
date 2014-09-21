@@ -1,8 +1,6 @@
 package ezweb
 
 import (
-	"fmt"
-	"medved/q"
 	"reflect"
 	"regexp"
 	"strings"
@@ -16,7 +14,7 @@ const (
 	MaxLength Rule = "MaxLength"
 )
 
-var rules = []Rule{Required, MinLength}
+var rules = []Rule{Required, MinLength, MaxLength}
 
 // FormIsValid validates the form via fields' tags  containing rules like
 // "Required", "MinLength", etc

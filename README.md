@@ -1,25 +1,26 @@
 # ezweb - a tiny Go web framework #
 
-This is an early release of a simple MVC-ish web framework for Go.
+This is a simple MVC-ish web framework for Go, which is basically a small
+wrapper around Go's net/http.
 
-It's basically a small wrapper around Go's net/http.
+It supports PostgreSQL via [gorp](https://github.com/coopernurse/gorp), but
+more databases will be added in the future.
 
-It supports PostgreSQL via [gorp](https://github.com/coopernurse/gorp), but more databases will be
-added in the future.
-
-This is an alpha release missing several key features and is not recommended for use in production.
+This is an alpha release missing several key features and is not recommended
+for use in production.
 
 
 ## Quick start ##
+```
+run with 'cd $GOPATH/src/github.com/medvednikov/ezweb/examples/quickstart &&
+go run runner/*go' and visit http://localhost:8088/
+```
 
 ```go
-// run with 'go run examples/quickstart.go' and visit http://localhost:8088/
-package main
+// home-controller.go
+package quickstart
 
-import (
-	ez "github.com/medvednikov/ezweb"
-	"net/http"
-)
+import ez "github.com/medvednikov/ezweb"
 
 type Home struct {
 	ez.Controller
@@ -32,20 +33,21 @@ func (c *Home) Index(name string) {
 	c.Write("Hello, ", name, "! :)")
 }
 
-func main() {
-	ez.Route("/", &Home{}) // or
-	// http.HandleFunc("/", ez.GetHandler(&Home{}))
+// quickstart.go
+package main
 
-	http.ListenAndServe(":8088", nil)
+func main() {
+	ez.Route("/", &quickstart.Home{})
+	ez.Start(":8088", true)
 }
 ```
 
 
 ## Key features ##
 
-The key features of ezweb are ease of use, lack of clutter, and a very simple way to quickly define
-actions and parameters without extra routing and configuration files: a function declaration is
-enough.
+The key features of ezweb are ease of use, lack of clutter, and a very simple
+way to quickly define actions and parameters without extra routing and
+configuration files: a function declaration is enough.
 
 Compare using net/http, beego, and ezweb to implement a simple user search page:
 
@@ -91,7 +93,7 @@ func (c *Home) UserSearch(name string, age int) {
 
 func main() {
 	ez.Route("/", &Home{})
-	http.ListenAndServe(":8088", nil)
+	ez.Start(":8088", true)
 }
 ```
 
