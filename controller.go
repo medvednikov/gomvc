@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -76,7 +77,8 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 					fmt.Fprintln(w,
 						`An unhandled error has occurred,
 				we have been notified about it. Sorry for the inconvenience.`)
-					fmt.Println("Error: ", r)
+					fmt.Println("ezweb Error: ", r)
+					fmt.Println(string(debug.Stack()))
 				}
 			}()
 		}
@@ -451,8 +453,15 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// Custom funcs
 	t := template.New(file).Funcs(template.FuncMap{
-		"eq":  reflect.DeepEqual,
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+		"mul": func(a, b int) int { return a * b },
 		"inc": func(n int) int { return n + 1 },
+		"tojson": func(i interface{}) template.JS {
+			out, _ := json.Marshal(i)
+			res := template.JS(out)
+			return res
+		},
 	}).Funcs(c.CustomTemplateFuncs)
 
 	t2, err := t.Parse(s)
