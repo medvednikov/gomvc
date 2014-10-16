@@ -422,6 +422,33 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 	return reflect.Value{}
 }
 
+// Custom html/template functions
+var defaultFuncs = template.FuncMap{
+	"add": func(a, b int) int { return a + b },
+	"sub": func(a, b int) int { return a - b },
+	"mul": func(a, b int) int { return a * b },
+	"inc": func(n int) int { return n + 1 },
+	"tojson": func(i interface{}) template.JS {
+		out, _ := json.Marshal(i)
+		res := template.JS(out)
+		return res
+	},
+	"js": func(file string) template.HTML {
+		if strings.Index(file, "//") == -1 {
+			file = "/js/" + file
+		}
+		file += fmt.Sprintf("?%d", TimeStamp)
+		return template.HTML("<script src='" + file + "'></script>")
+	},
+	"css": func(file string) template.HTML {
+		if strings.Index(file, "//") == -1 {
+			file = "/css/" + file
+		}
+		file += fmt.Sprintf("?%d", TimeStamp)
+		return template.HTML("<link href='" + file + "' rel='stylesheet'>")
+	},
+}
+
 // parseTemplate parses a provided html template file and returns a
 // *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
@@ -475,17 +502,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
 
 	// Custom funcs
-	t := template.New(file).Funcs(template.FuncMap{
-		"add": func(a, b int) int { return a + b },
-		"sub": func(a, b int) int { return a - b },
-		"mul": func(a, b int) int { return a * b },
-		"inc": func(n int) int { return n + 1 },
-		"tojson": func(i interface{}) template.JS {
-			out, _ := json.Marshal(i)
-			res := template.JS(out)
-			return res
-		},
-	}).Funcs(c.CustomTemplateFuncs)
+	t := template.New(file).Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
 
 	t2, err := t.Parse(s)
 	return t2, err
