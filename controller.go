@@ -61,6 +61,8 @@ var (
 	// func (c *Home) Register(name string, email string)
 	// ActionArgs["Home"]["Register"] = [ "name", "email" ]
 	ActionArgs map[string]map[string][]string
+
+	TimeStamp int64
 )
 
 // GetHandler generates a net/http handler func from a controller making it
@@ -312,8 +314,10 @@ func (c *Controller) initValues(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	values := r.URL.Query()
 	c.Uri = r.URL.Path[1:]
-	actionName := getActionFromUri(c.Uri, c.ControllerName == "Home")
-	c.ActionName = actionName
+	c.ActionName = getActionFromUri(c.Uri, c.ControllerName == "Home")
+	if r.Method != "GET" {
+		c.ActionName += "_" + r.Method
+	}
 	c.PageTitle = ""
 
 	// Generate query string map (Params)
@@ -335,13 +339,32 @@ func (c *Controller) initValues(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (c *Controller) checkMethodType() bool {
+	types := []string{"POST", "PUT", "DELETE"}
+	for _, t := range types {
+		if strings.Index(c.ActionName, t) > -1 &&
+			c.Request.Method != t {
+			c.Write(t, " expected")
+			return false
+		}
+	}
+	return true
+}
+
 // run starts controller's action
 func run(controllerObj interface{}, c *Controller) {
 	// Fetch the method (action) that needs to be run
 	method := reflect.ValueOf(controllerObj).MethodByName(c.ActionName)
 	if !method.IsValid() {
-		c.Write("Unknown action '" + c.ActionName +
-			"' (controller: '" + c.ControllerName + "')")
+		http.NotFound(c.Out, c.Request)
+		if Debug {
+			c.Write("Unknown action '" + c.ActionName +
+				"' (controller: '" + c.ControllerName + "')")
+		}
+		return
+	}
+
+	if !c.checkMethodType() {
 		return
 	}
 
@@ -521,8 +544,8 @@ func getActionsFromSourceFile(sourceFile string) {
 				args[i] = strings.Split(arg, " ")[0]
 			}
 		}
-		ActionArgs[controllerName][functionName] = args
 
+		ActionArgs[controllerName][functionName] = args
 	}
 
 	// Cache actions data for production use
@@ -534,9 +557,9 @@ package main
 import "github.com/medvednikov/ezweb"
 
 func init() {
-if !ezweb.Debug {
+//if !ezweb.Debug {
 	ezweb.ActionArgs = `+dump(ActionArgs)+`
-}
+//}
 }`)
 	out.Close()
 }
@@ -576,6 +599,8 @@ func handle(err error) {
 
 func Start(port string, isDebug bool) {
 	Debug = isDebug
+	TimeStamp = time.Now().Unix()
+	fmt.Println("Starting an ezweb app with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
 	http.ListenAndServe(port, nil)
