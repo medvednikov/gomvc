@@ -65,8 +65,8 @@ var (
 	TimeStamp int64
 )
 
-// GetHandler generates a net/http handler func from a controller making it
-// handle all incoming requests.
+// GetHandler generates a net/http handler func from a controller type.
+// A new controller instance is created to handle incoming requests.
 // Example:
 // http.HandleFunc("/Account/", ez.GetHandler(&AccountController{}))
 func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
@@ -89,15 +89,20 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		// Get base object (ez.Controller), initialize it and update it
-		val := reflect.ValueOf(obj)
-		// The base Controller object may be several 'parents' away
+		// Fetch the type of the controller (e.g. "Home")
+		typ := reflect.Indirect(reflect.ValueOf(obj)).Type()
+
+		// Create a new controller of this type for this request
+		val := reflect.New(typ)
+
+		// Get base object c (ez.Controller), initialize it and update
+		// it. It can be several 'parents' away.
 		parentVal := val.Elem().Field(0)
 		for parentVal.Type().Name() != "Controller" {
 			parentVal = parentVal.Field(0) // TODO error if nothing was found
 		}
 		c := parentVal.Interface().(Controller)
-		c.ControllerName = reflect.TypeOf(obj).Elem().Name()
+		c.ControllerName = typ.Name()
 		c.initValues(w, r)
 		parentVal.Set(reflect.ValueOf(c))
 
@@ -107,9 +112,9 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 			beforeRun.Call([]reflect.Value{})
 		}
 
-		// Run the actual method. This can't be defined as type's
-		// method since it needs an interface{} for reflection
-		run(obj, &c)
+		// Run the actual method
+		method := val.MethodByName(c.ActionName)
+		run(method, &c)
 
 		// Run the 'after run' action if it exists
 		afterRun := val.MethodByName("AfterRun_")
@@ -351,10 +356,8 @@ func (c *Controller) checkMethodType() bool {
 	return true
 }
 
-// run starts controller's action
-func run(controllerObj interface{}, c *Controller) {
-	// Fetch the method (action) that needs to be run
-	method := reflect.ValueOf(controllerObj).MethodByName(c.ActionName)
+// run runs a specified controller action (method)
+func run(method reflect.Value, c *Controller) {
 	if !method.IsValid() {
 		http.NotFound(c.Out, c.Request)
 		if Debug {
