@@ -447,6 +447,12 @@ var defaultFuncs = template.FuncMap{
 		file += fmt.Sprintf("?%d", TimeStamp)
 		return template.HTML("<link href='" + file + "' rel='stylesheet'>")
 	},
+	"staticcss": func(file string) template.HTML {
+		if strings.Index(file, "//") == -1 {
+			file = "/css/" + file
+		}
+		return template.HTML("<link href='" + file + "' rel='stylesheet'>")
+	},
 }
 
 // parseTemplate parses a provided html template file and returns a
