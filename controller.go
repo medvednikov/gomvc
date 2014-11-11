@@ -63,6 +63,10 @@ var (
 	ActionArgs map[string]map[string][]string
 
 	TimeStamp int64
+
+	// Template cache. Once a template file is parsed, the result is saved
+	// for future use to improve performance
+	templateCache = make(map[string]*template.Template, 0)
 )
 
 // GetHandler generates a net/http handler func from a controller type.
@@ -155,13 +159,24 @@ func (c *Controller) Index() {
 
 // View executes a template corresponding to the current controller method
 func (c *Controller) View(data interface{}) {
-	template, err := parseTemplate("templates/"+c.ControllerName+"/"+c.ActionName+".html", c)
-	if err != nil {
-		fmt.Println("Template error: ", err)
-		if Debug {
-			c.Write("Template error: ", err)
+	var template *template.Template
+	var err error
+	templatePath := "templates/" + c.ControllerName + "/" + c.ActionName +
+		".html"
+	// Fetch the template from cache, if it's not there - open the file
+	// and parse it
+	if _, ok := templateCache[templatePath]; ok {
+		template = templateCache[templatePath]
+	} else {
+		template, err = parseTemplate(templatePath, c)
+		if err != nil {
+			fmt.Println("Template error: ", err)
+			if Debug {
+				c.Write("Template error: ", err)
+			}
+			return
 		}
-		return
+		templateCache[templatePath] = template
 	}
 
 	err = template.Execute(c.Out, data)
@@ -458,8 +473,8 @@ var defaultFuncs = template.FuncMap{
 	},
 }
 
-// parseTemplate parses a provided html template file and returns a
-// *template.Template object
+// parseTemplate parses a provided html template file, applies all custom
+// structures and functions, and returns a *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	// Read layout.html
 	layout, err := ioutil.ReadFile("templates/layout.html")
