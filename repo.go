@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+var (
+	queryDebug string
+)
+
 // Repo is a PostgreSQL repository type
 type Repo struct {
 	tableName string
@@ -26,7 +30,8 @@ func (r *Repo) Add(u interface{}) error {
 	return err
 }
 
-// Retrieve searches for a row with a given id and binds the result to a given object
+// Retrieve searches for a row with a given id and binds the result to a given
+// object
 func (r *Repo) Retrieve(result interface{}, id int) {
 	err := r.SelectOne(result, "id=$1", id)
 	h(err)
@@ -44,34 +49,40 @@ func (r *Repo) Update(u interface{}) error {
 	return err
 }
 
-// SelectOne searches for a row using a given query and binds the result to a given object
+// SelectOne searches for a row using a given query and binds the result to a
+// given object
 // Example:
 // var user *User
 // repo.SelectOne(&user, "Name=$1 AND Email=$2", name, email)
-func (r *Repo) SelectOne(result interface{}, query string, args ...interface{}) error {
-	err := r.dbmap.SelectOne(result, r.selectWhere(query), args...)
+func (r *Repo) SelectOne(res interface{}, qry string, args ...interface{}) error {
+	err := r.dbmap.SelectOne(res, r.selectWhere(qry), args...)
 	h(err)
 	return err
 }
 
-// Select executes a search using a given query and binds the result to a given slice
+// Select executes a search using a given query and binds the result to a given
+// slice
 // Example:
 // var users *[]User
 // repo.Select(&users, "Age > 18")
-func (r *Repo) Select(result interface{}, query string, args ...interface{}) error {
-	_, err := r.dbmap.Select(result, r.selectWhere(query), args...)
+func (r *Repo) Select(res interface{}, query string, args ...interface{}) error {
+	_, err := r.dbmap.Select(res, r.selectWhere(query), args...)
 	h(err)
 	return err
 }
 
 // Count executes a given query and returns the number of corresponding rows
 func (r *Repo) Count(query string) int {
-	count, _ := r.dbmap.SelectInt(r.q("SELECT COUNT(*) FROM [t] WHERE " + query))
+	if Debug {
+		queryDebug = r.q("SELECT COUNT(*) FROM [t] WHERE " + query)
+	}
+	count, _ := r.dbmap.SelectInt(
+		r.q("SELECT COUNT(*) FROM [t] WHERE " + query))
 	return int(count)
 }
 
-// Init initializes the repository object. It needs a database pointer, name of the table,
-// and the type to bind to.
+// Init initializes the repository object. It needs a database pointer, name of
+// the table, and the type to bind to.
 // Example:
 // repo.Init(DB, "Users", User{})
 func (r *Repo) Init(db *sql.DB, colName string, obj interface{}) {
@@ -88,12 +99,16 @@ func (r *Repo) q(query string) string {
 
 // SELECT is a helper method that builds a SELECT * FROM query
 func (r *Repo) selectWhere(query string) string {
+	if Debug {
+		queryDebug = r.q("SELECT * FROM [t] WHERE " + query)
+	}
 	return r.q("SELECT * FROM [t] WHERE " + query)
 }
 
 // h handles errors (logs them)
 func h(err error) {
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("ezweb sql error:", err)
+		fmt.Println("query:", queryDebug, "\n")
 	}
 }
