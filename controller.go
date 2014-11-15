@@ -165,7 +165,7 @@ func (c *Controller) View(data interface{}) {
 		".html"
 	// Fetch the template from cache, if it's not there - open the file
 	// and parse it
-	if _, ok := templateCache[templatePath]; ok {
+	if _, ok := templateCache[templatePath]; ok && !Debug {
 		template = templateCache[templatePath]
 	} else {
 		template, err = parseTemplate(templatePath, c)
@@ -507,7 +507,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// @if a
 	// ===> {{ if a }}
-	r := regexp.MustCompile("@(if|else|end|range)(.*?)\n")
+	r := regexp.MustCompile("@(if|else|end|range|template)(.*?)\n")
 	s = r.ReplaceAllString(s, "{{ $1 $2 }}\n")
 
 	// @Name (always starts with a capital letter)
