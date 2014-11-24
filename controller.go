@@ -505,9 +505,14 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	s = strings.Replace(s, "\t", "", -1)
 	s = strings.Replace(s, "  ", "", -1)
 
+	// Comments
+	// @* .... *@ ==> {{/*}} .... {{*/}}
+	r := regexp.MustCompile(`@\*(.*?)\*@`)
+	s = r.ReplaceAllString(s, "")
+
 	// @if a
 	// ===> {{ if a }}
-	r := regexp.MustCompile("@(if|else|end|range|template)(.*?)\n")
+	r = regexp.MustCompile("@(if|else|end|range|template|define)(.*?)\n")
 	s = r.ReplaceAllString(s, "{{ $1 $2 }}\n")
 
 	// @Name (always starts with a capital letter)
