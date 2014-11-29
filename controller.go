@@ -3,17 +3,19 @@ package ezweb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"html/template"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 // Controller is the core type of ezweb
@@ -80,9 +82,9 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 			defer func() {
 				if r := recover(); r != nil {
 					// TODO Custom error templates
-					fmt.Fprintln(w,
-						`An unhandled error has occurred,
-				we have been notified about it. Sorry for the inconvenience.`)
+					fmt.Fprintln(w, `
+An unhandled error has occurred,
+we have been notified about it. Sorry for the inconvenience.`)
 					fmt.Println("ezweb Error: ", r)
 					fmt.Println(string(debug.Stack()))
 				}
@@ -107,7 +109,7 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 		}
 		c := parentVal.Interface().(Controller)
 		c.ControllerName = typ.Name()
-		c.initValues(w, r)
+		c.InitValues(w, r)
 		parentVal.Set(reflect.ValueOf(c))
 
 		// Run the 'before run' action if it exists
@@ -329,7 +331,7 @@ func getActionFromUri(uri string, isIndex bool) string {
 
 // initValues parses the http.Request object and fetches all necessary values
 // for ezweb.Controller
-func (c *Controller) initValues(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	c.Out = w
 	c.Request = r
 	values := r.URL.Query()
@@ -401,6 +403,8 @@ func run(method reflect.Value, c *Controller) {
 		values = append(values, c.argToValue(stringValue, argType))
 	}
 
+	// TODO handle empty values
+	//fmt.Println(c.ControllerName, c.ActionName, values, dump(ActionArgs))
 	method.Call(values)
 }
 
@@ -549,22 +553,48 @@ func getActionsFromSourceFiles() {
 
 	ActionArgs = make(map[string]map[string][]string, 0)
 
-	files, _ := ioutil.ReadDir("./")
+	// Get location of the compiled application
+	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+
+	// Parse the controllers directory
+	files, err := ioutil.ReadDir(curdir + "/controllers/")
+	if err != nil {
+		panic("Can't find the controllers directory in debug mode.\n" +
+			"Current location: " + curdir)
+	}
+
 	for _, file := range files {
-		if strings.Index(file.Name(), "-controller.go") > -1 {
+		if strings.HasSuffix(file.Name(), ".go") &&
+			!strings.HasSuffix(file.Name(), "_test.go") {
 			getActionsFromSourceFile(file.Name())
 		}
 	}
+
+	// Cache actions data for production use
+	out, _ := os.Create("autogen/autogen.go")
+	fmt.Fprintln(out, `
+// This file has been generated automatically. Do not modify it.
+package autogen
+
+import "github.com/medvednikov/ezweb"
+
+func init() {
+	ezweb.ActionArgs = `+dump(ActionArgs)+`
+}`)
+	out.Close()
 }
 
 func getActionsFromSourceFile(sourceFile string) {
-	b, err := ioutil.ReadFile(sourceFile)
+	b, err := ioutil.ReadFile("controllers/" + sourceFile)
 	handle(err)
 	source := string(b)
 
-	controllerName := capitalize(
-		strings.Replace(sourceFile, "-controller.go", "", -1))
+	pos := strings.Index(sourceFile, ".go")
+	if pos == -1 {
+		return
+	}
 
+	controllerName := capitalize(sourceFile[:pos])
 	ActionArgs[controllerName] = make(map[string][]string, 0)
 
 	// Search for "func (...) ActionName(...) {"
@@ -593,21 +623,6 @@ func getActionsFromSourceFile(sourceFile string) {
 
 		ActionArgs[controllerName][functionName] = args
 	}
-
-	// Cache actions data for production use
-	out, _ := os.Create("runner/autogen.go")
-	fmt.Fprintln(out, `
-// This file has been generated automatically. Do not modify it.
-package main
-
-import "github.com/medvednikov/ezweb"
-
-func init() {
-//if !ezweb.Debug {
-	ezweb.ActionArgs = `+dump(ActionArgs)+`
-//}
-}`)
-	out.Close()
 }
 
 //////// helper functions////////
@@ -643,11 +658,13 @@ func handle(err error) {
 	}
 }
 
-func Start(port string, isDebug bool) {
+func Run(port string, isDebug bool) {
 	Debug = isDebug
 	TimeStamp = time.Now().Unix()
 	fmt.Println("Starting an ezweb app with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
-	http.ListenAndServe(port, nil)
+	if port != "" {
+		fmt.Println(http.ListenAndServe(port, nil))
+	}
 }

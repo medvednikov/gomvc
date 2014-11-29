@@ -1,8 +1,6 @@
-package quickstart
+package controllers
 
-import (
-	ez "github.com/medvednikov/ezweb"
-)
+import ez "github.com/medvednikov/ezweb"
 
 type Home struct {
 	ez.Controller

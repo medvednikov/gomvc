@@ -3,7 +3,7 @@
 This is a simple MVC-ish web framework for Go, which is basically a small
 wrapper around Go's net/http.
 
-It supports PostgreSQL via [gorp](https://github.com/coopernurse/gorp), but
+It supports PostgreSQL via [gorp](https://github.com/coopernurse/gorp), and
 more databases will be added in the future.
 
 This is an alpha release missing several key features and is not recommended
@@ -11,14 +11,18 @@ for use in production.
 
 
 ## Quick start ##
+You can run the quick start example with
+
 ```
-run with 'cd $GOPATH/src/github.com/medvednikov/ezweb/examples/quickstart &&
-go run runner/*go' and visit http://localhost:8088/
+cd $GOPATH/src/github.com/medvednikov/ezweb/examples/quickstart &&
+go run main.go
 ```
 
+Now visit http://localhost:8088
+
 ```go
-// home-controller.go
-package quickstart
+// controllers/home.go
+package controllers
 
 import ez "github.com/medvednikov/ezweb"
 
@@ -33,11 +37,16 @@ func (c *Home) Index(name string) {
 	c.Write("Hello, ", name, "! :)")
 }
 
-// quickstart.go
+// main.go
 package main
 
+import (
+	ez "github.com/medvednikov/ezweb"
+	. "./controllers"
+)
+
 func main() {
-	ez.Route("/", &quickstart.Home{})
+	ez.Route("/", &Home{})
 	ez.Start(":8088", true)
 }
 ```
@@ -50,6 +59,19 @@ way to quickly define actions and parameters without extra routing and
 configuration files: a function declaration is enough.
 
 Compare using net/http, beego, and ezweb to implement a simple user search page:
+
+```go
+// ezweb
+func (c *Home) UserSearch(name string, age int) {
+	user := usersRepo.FindByNameAndAge(name, age)
+	c.View(user)
+}
+
+func main() {
+	ez.Route("/", &Home{})
+	ez.Run(":8088", true)
+}
+```
 
 ```go
 // net/http
@@ -81,19 +103,6 @@ func (this *MainController) Get() {
 func main() {
 	beego.Router("/UserSearch", &MainController{})
 	beego.Run()
-}
-```
-
-```go
-// ezweb
-func (c *Home) UserSearch(name string, age int) {
-	user := usersRepo.FindByNameAndAge(name, age)
-	c.View(user)
-}
-
-func main() {
-	ez.Route("/", &Home{})
-	ez.Start(":8088", true)
 }
 ```
 
