@@ -120,7 +120,7 @@ we have been notified about it. Sorry for the inconvenience.`)
 
 		// Run the actual method
 		method := val.MethodByName(c.ActionName)
-		run(method, &c)
+		runMethod(method, &c)
 
 		// Run the 'after run' action if it exists
 		afterRun := val.MethodByName("AfterRun_")
@@ -296,6 +296,18 @@ func (c *Controller) JsonRedirect(redirectUrl string) {
 	c.Write(string(obj))
 }
 
+// Run initializes starts the web server
+func Run(port string, isDebug bool) {
+	Debug = isDebug
+	TimeStamp = time.Now().Unix()
+	fmt.Println("Starting an ezweb app on port ", port, " with debug=", Debug)
+	getActionsFromSourceFiles()
+	http.Handle("/", router)
+	if port != "" {
+		fmt.Println(http.ListenAndServe(port, nil))
+	}
+}
+
 //////// private methods ////////
 
 // getActionFromUri fetches an action name from uri:
@@ -373,8 +385,8 @@ func (c *Controller) checkMethodType() bool {
 	return true
 }
 
-// run runs a specified controller action (method)
-func run(method reflect.Value, c *Controller) {
+// runMethod runs a specified controller action (method)
+func runMethod(method reflect.Value, c *Controller) {
 	if !method.IsValid() {
 		http.NotFound(c.Out, c.Request)
 		if Debug {
@@ -655,16 +667,5 @@ func decapitalize(s string) string {
 func handle(err error) {
 	if err != nil {
 		panic(err)
-	}
-}
-
-func Run(port string, isDebug bool) {
-	Debug = isDebug
-	TimeStamp = time.Now().Unix()
-	fmt.Println("Starting an ezweb app with debug=", Debug)
-	getActionsFromSourceFiles()
-	http.Handle("/", router)
-	if port != "" {
-		fmt.Println(http.ListenAndServe(port, nil))
 	}
 }

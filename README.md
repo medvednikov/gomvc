@@ -15,7 +15,7 @@ You can run the quick start example with
 
 ```
 cd $GOPATH/src/github.com/medvednikov/ezweb/examples/quickstart &&
-go run quickstart.go
+go build quickstart.go && ./quickstart
 ```
 
 Now visit http://localhost:8088
@@ -47,7 +47,7 @@ import (
 
 func main() {
 	ez.Route("/", &Home{})
-	ez.Start(":8088", true)
+	ez.Run(":8088", true)
 }
 ```
 
