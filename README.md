@@ -15,7 +15,7 @@ You can run the quick start example with
 
 ```
 cd $GOPATH/src/github.com/medvednikov/ezweb/examples/quickstart &&
-go run main.go
+go run quickstart.go
 ```
 
 Now visit http://localhost:8088
