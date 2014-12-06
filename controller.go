@@ -569,7 +569,8 @@ func getActionsFromSourceFiles() {
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	// Parse the controllers directory
-	files, err := ioutil.ReadDir(curdir + "/controllers/")
+	controllersDir := curdir + "/controllers/"
+	files, err := ioutil.ReadDir(controllersDir)
 	if err != nil {
 		panic("Can't find the controllers directory in debug mode.\n" +
 			"Current location: " + curdir)
@@ -578,7 +579,7 @@ func getActionsFromSourceFiles() {
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".go") &&
 			!strings.HasSuffix(file.Name(), "_test.go") {
-			getActionsFromSourceFile(file.Name())
+			getActionsFromSourceFile(controllersDir + file.Name())
 		}
 	}
 
@@ -597,7 +598,7 @@ func init() {
 }
 
 func getActionsFromSourceFile(sourceFile string) {
-	b, err := ioutil.ReadFile("controllers/" + sourceFile)
+	b, err := ioutil.ReadFile(sourceFile)
 	handle(err)
 	source := string(b)
 
