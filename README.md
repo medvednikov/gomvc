@@ -1,4 +1,4 @@
-# ezweb - a tiny Go web framework #
+# gomvc - a tiny MVC web framework for Go #
 
 This is a simple MVC-ish web framework for Go, which is basically a small
 wrapper around Go's net/http.
@@ -14,7 +14,7 @@ for use in production.
 You can run the quick start example with
 
 ```
-cd $GOPATH/src/github.com/medvednikov/ezweb/examples/quickstart &&
+cd $GOPATH/src/github.com/medvednikov/gomvc/examples/quickstart &&
 go build quickstart.go && ./quickstart
 ```
 
@@ -24,10 +24,10 @@ Now visit http://localhost:8088
 // controllers/home.go
 package controllers
 
-import ez "github.com/medvednikov/ezweb"
+import "github.com/medvednikov/gomvc"
 
 type Home struct {
-	ez.Controller
+	gomvc.Controller
 }
 
 func (c *Home) Index(name string) {
@@ -41,27 +41,27 @@ func (c *Home) Index(name string) {
 package main
 
 import (
-	ez "github.com/medvednikov/ezweb"
+	"github.com/medvednikov/gomvc"
 	. "./controllers"
 )
 
 func main() {
-	ez.Route("/", &Home{})
-	ez.Run(":8088", true)
+	gomvc.Route("/", &Home{})
+	gomvc.Run(":8088", true)
 }
 ```
 
 
 ## Key features ##
 
-The key features of ezweb are ease of use, lack of clutter, and a very simple
+The key features of gomvc are ease of use, lack of clutter, and a very simple
 way to quickly define actions and parameters without extra routing and
 configuration files: a function declaration is enough.
 
-Compare using net/http, beego, and ezweb to implement a simple user search page:
+Compare using net/http, beego, and gomvc to implement a simple user search page:
 
 ```go
-// ezweb
+// gomvc
 func (c *Home) UserSearch(name string, age int) {
 	user := usersRepo.FindByNameAndAge(name, age)
 	c.View(user)
@@ -113,17 +113,17 @@ func main() {
     go get github.com/coopernurse/gorp
 
     # Install the package:
-    go get github.com/medvednikov/ezweb
+    go get github.com/medvednikov/gomvc
 	    
     // Use in your code:
-    import "github.com/medvednikov/ezweb"
+    import "github.com/medvednikov/gomvc"
 
 
 ## API Documentation ##
 
 Full godoc output from the latest code in master is available here:
 
-http://godoc.org/github.com/medvednikov/ezweb
+http://godoc.org/github.com/medvednikov/gomvc
 
 
 
