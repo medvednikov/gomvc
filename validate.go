@@ -1,4 +1,4 @@
-package ezweb
+package gomvc
 
 import (
 	"reflect"

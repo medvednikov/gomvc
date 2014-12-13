@@ -15,6 +15,7 @@ var (
 )
 
 func TestQuickStart(t *testing.T) {
+	ez.Run("", true)
 	// Create a test server serving one of the controllers
 	ts = httptest.NewServer(http.HandlerFunc(ez.GetHandler(&Home{})))
 	defer ts.Close()

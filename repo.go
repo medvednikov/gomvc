@@ -1,10 +1,11 @@
-package ezweb
+package gomvc
 
 import (
 	"database/sql"
 	"fmt"
-	"github.com/coopernurse/gorp"
 	"strings"
+
+	"github.com/coopernurse/gorp"
 )
 
 var (
@@ -63,10 +64,16 @@ func (r *Repo) SelectOne(res interface{}, qry string, args ...interface{}) error
 // Select executes a search using a given query and binds the result to a given
 // slice
 // Example:
-// var users *[]User
+// var users []*User
 // repo.Select(&users, "Age > 18")
 func (r *Repo) Select(res interface{}, query string, args ...interface{}) error {
 	_, err := r.dbmap.Select(res, r.selectWhere(query), args...)
+	h(err)
+	return err
+}
+
+func (r *Repo) FindAll(res interface{}) error {
+	err := r.Select(res, "1=1")
 	h(err)
 	return err
 }
@@ -108,7 +115,8 @@ func (r *Repo) selectWhere(query string) string {
 // h handles errors (logs them)
 func h(err error) {
 	if err != nil {
-		fmt.Println("ezweb sql error:", err)
+		fmt.Println("gomvc sql error:", err)
 		fmt.Println("query:", queryDebug, "\n")
+		//panic(err)
 	}
 }

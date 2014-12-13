@@ -1,4 +1,4 @@
-package ezweb
+package gomvc
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Controller is the core type of ezweb
+// Controller is the core type of gomvc
 type Controller struct {
 	Request *http.Request
 	Out     http.ResponseWriter
@@ -85,7 +85,7 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 					fmt.Fprintln(w, `
 An unhandled error has occurred,
 we have been notified about it. Sorry for the inconvenience.`)
-					fmt.Println("ezweb Error: ", r)
+					fmt.Println("gomvc Error: ", r)
 					fmt.Println(string(debug.Stack()))
 				}
 			}()
@@ -147,10 +147,10 @@ func Route(path string, controller interface{}) {
 
 // Index defines a default action
 func (c *Controller) Index() {
-	c.Say(`Welcome to ezweb! Define your own Index action:
+	c.Say(`Welcome to gomvc! Define your own Index action:
 
     type Home struct {
-        ezweb.Controller
+        gomvc.Controller
     }
 
     func (c *Home) Index() {
@@ -296,11 +296,20 @@ func (c *Controller) JsonRedirect(redirectUrl string) {
 	c.Write(string(obj))
 }
 
+func staticPrefix(dir string) http.Handler {
+	return http.StripPrefix("/"+dir+"/",
+		http.FileServer(http.Dir("static/"+dir)))
+}
+
+func ServeStatic(dir string) {
+	http.Handle("/"+dir+"/", staticPrefix(dir))
+}
+
 // Run initializes starts the web server
 func Run(port string, isDebug bool) {
 	Debug = isDebug
 	TimeStamp = time.Now().Unix()
-	fmt.Println("Starting an ezweb app on port ", port, " with debug=", Debug)
+	fmt.Println("Starting a gomvc app on port ", port, " with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
 	if port != "" {
@@ -342,7 +351,7 @@ func getActionFromUri(uri string, isIndex bool) string {
 }
 
 // initValues parses the http.Request object and fetches all necessary values
-// for ezweb.Controller
+// for gomvc.Controller
 func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	c.Out = w
 	c.Request = r
@@ -492,10 +501,11 @@ var defaultFuncs = template.FuncMap{
 // parseTemplate parses a provided html template file, applies all custom
 // structures and functions, and returns a *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
+	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	// Read layout.html
 	layout, err := ioutil.ReadFile("templates/layout.html")
 	if err != nil {
-		fmt.Println("Template layout not found")
+		fmt.Println("Template layout not found", curdir)
 	}
 
 	layoutStr := string(layout)
@@ -503,7 +513,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	// Read template file
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
-		fmt.Println("Template '", file, "' is not found")
+		fmt.Println("Template '", file, "' is not found!", curdir)
 	}
 	s := string(b)
 
@@ -565,21 +575,20 @@ func getActionsFromSourceFiles() {
 
 	ActionArgs = make(map[string]map[string][]string, 0)
 
-	// Get location of the compiled application
+	// Parse the controllers directory (it should be in the same directory)
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-
-	// Parse the controllers directory
-	controllersDir := curdir + "/controllers/"
-	files, err := ioutil.ReadDir(controllersDir)
+	files, err := ioutil.ReadDir("controllers/")
 	if err != nil {
-		panic("Can't find the controllers directory in debug mode.\n" +
-			"Current location: " + curdir)
+		panic(`
+Can't find the controllers directory in debug mode.
+Make sure you are running the application from the directory where it's located
+Current directory: ` + curdir)
 	}
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".go") &&
 			!strings.HasSuffix(file.Name(), "_test.go") {
-			getActionsFromSourceFile(controllersDir + file.Name())
+			getActionsFromSourceFile(file.Name())
 		}
 	}
 
@@ -589,16 +598,16 @@ func getActionsFromSourceFiles() {
 // This file has been generated automatically. Do not modify it.
 package autogen
 
-import "github.com/medvednikov/ezweb"
+import "github.com/medvednikov/gomvc"
 
 func init() {
-	ezweb.ActionArgs = `+dump(ActionArgs)+`
+	gomvc.ActionArgs = `+dump(ActionArgs)+`
 }`)
 	out.Close()
 }
 
 func getActionsFromSourceFile(sourceFile string) {
-	b, err := ioutil.ReadFile(sourceFile)
+	b, err := ioutil.ReadFile("controllers/" + sourceFile)
 	handle(err)
 	source := string(b)
 

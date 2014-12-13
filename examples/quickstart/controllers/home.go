@@ -8,7 +8,7 @@ type Home struct {
 
 func (c *Home) Index(name string) {
 	if name == "" {
-		name = "stranger"
+		name = "sstranger"
 	}
 	c.Write("Hello, ", name, "! :)")
 }
