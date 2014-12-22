@@ -6,10 +6,6 @@ wrapper around Go's net/http.
 It supports PostgreSQL via [gorp](https://github.com/coopernurse/gorp), and
 more databases will be added in the future.
 
-This is an alpha release missing several key features and is not recommended
-for use in production.
-
-
 ## Quick start ##
 You can run the quick start example with
 
