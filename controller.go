@@ -46,6 +46,8 @@ type Controller struct {
 
 	// PageTitle defines the title of the HTML page and is set in the action
 	PageTitle string
+
+	stopped bool
 }
 
 var (
@@ -112,10 +114,10 @@ we have been notified about it. Sorry for the inconvenience.`)
 		c.InitValues(w, r)
 		parentVal.Set(reflect.ValueOf(c))
 
-		// Run the 'before run' action if it exists
-		beforeRun := val.MethodByName("BeforeRun_")
-		if beforeRun.IsValid() {
-			beforeRun.Call([]reflect.Value{})
+		// Run the 'before action' action if it exists
+		beforeAction := val.MethodByName("BeforeAction_")
+		if beforeAction.IsValid() {
+			beforeAction.Call([]reflect.Value{})
 		}
 
 		// Run the actual method
@@ -160,7 +162,11 @@ func (c *Controller) Index() {
 }
 
 // View executes a template corresponding to the current controller method
-func (c *Controller) View(data interface{}) {
+func (c *Controller) Render(data interface{}) {
+	if c.stopped {
+		return
+	}
+
 	var template *template.Template
 	var err error
 	templatePath := "templates/" + c.ControllerName + "/" + c.ActionName +
@@ -239,9 +245,22 @@ func (c *Controller) SetContentType(ct string) {
 	c.Out.Header().Set("Content-Type", ct)
 }
 
+func (c *Controller) SetHeader(header, value string) {
+	c.Out.Header().Set(header, value)
+}
+
+func (c *Controller) RenderError(msg string, code int) {
+	http.Error(c.Out, msg, code)
+	c.stopped = true
+}
+
 // ReturnJson returns a marshaled json object with content type 'application/json'.
 // This is usually used for responding to AJAX requests.
-func (c *Controller) ReturnJson(model interface{}) {
+func (c *Controller) RenderJson(model interface{}) {
+	if c.stopped {
+		return
+	}
+
 	c.SetContentType("application/json")
 
 	j := struct {
@@ -261,7 +280,11 @@ func (c *Controller) ReturnJson(model interface{}) {
 	c.Write(string(obj))
 }
 
-func (c *Controller) ReturnJsonFail(errorMsg string) {
+func (c *Controller) RenderJsonError(errorMsg string) {
+	if c.stopped {
+		return
+	}
+
 	c.SetContentType("application/json")
 
 	j := struct {
@@ -281,7 +304,7 @@ func (c *Controller) ReturnJsonFail(errorMsg string) {
 	c.Write(string(obj))
 }
 
-func (c *Controller) JsonRedirect(redirectUrl string) {
+func (c *Controller) RenderJsonRedirect(redirectUrl string) {
 	c.SetContentType("application/json")
 
 	j := struct {
@@ -296,13 +319,13 @@ func (c *Controller) JsonRedirect(redirectUrl string) {
 	c.Write(string(obj))
 }
 
-func staticPrefix(dir string) http.Handler {
-	return http.StripPrefix("/"+dir+"/",
-		http.FileServer(http.Dir("static/"+dir)))
+func staticPrefix(prefix, dir string) http.Handler {
+	return http.StripPrefix("/"+prefix+"/",
+		http.FileServer(http.Dir(dir)))
 }
 
-func ServeStatic(dir string) {
-	http.Handle("/"+dir+"/", staticPrefix(dir))
+func ServeStatic(prefix, dir string) {
+	http.Handle("/"+prefix+"/", staticPrefix(prefix, dir))
 }
 
 // Run initializes starts the web server
