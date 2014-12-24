@@ -169,8 +169,7 @@ func (c *Controller) Render(data interface{}) {
 
 	var template *template.Template
 	var err error
-	templatePath := "templates/" + c.ControllerName + "/" + c.ActionName +
-		".html"
+	templatePath := "v/" + c.ControllerName + "/" + c.ActionName + ".html"
 	// Fetch the template from cache, if it's not there - open the file
 	// and parse it
 	if _, ok := templateCache[templatePath]; ok && !Debug {
@@ -526,7 +525,7 @@ var defaultFuncs = template.FuncMap{
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	// Read layout.html
-	layout, err := ioutil.ReadFile("templates/layout.html")
+	layout, err := ioutil.ReadFile("v/layout.html")
 	if err != nil {
 		fmt.Println("Template layout not found", curdir)
 	}
@@ -600,7 +599,7 @@ func getActionsFromSourceFiles() {
 
 	// Parse the controllers directory (it should be in the same directory)
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	files, err := ioutil.ReadDir("controllers/")
+	files, err := ioutil.ReadDir("c/")
 	if err != nil {
 		panic(`
 Can't find the controllers directory in debug mode.
@@ -630,7 +629,7 @@ func init() {
 }
 
 func getActionsFromSourceFile(sourceFile string) {
-	b, err := ioutil.ReadFile("controllers/" + sourceFile)
+	b, err := ioutil.ReadFile("c/" + sourceFile)
 	handle(err)
 	source := string(b)
 
