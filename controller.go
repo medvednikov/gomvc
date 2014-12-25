@@ -253,6 +253,11 @@ func (c *Controller) RenderError(msg string, code int) {
 	c.stopped = true
 }
 
+// Abort stops execution of the current action immediately
+func (c *Controller) Abort() {
+	c.stopped = true
+}
+
 // ReturnJson returns a marshaled json object with content type 'application/json'.
 // This is usually used for responding to AJAX requests.
 func (c *Controller) RenderJson(model interface{}) {
@@ -353,7 +358,7 @@ func getActionFromUri(uri, controller string) string {
 		return "Index"
 	}
 
-	values := strings.Split(uri, "/")
+	values := strings.Split(strings.Trim(uri, "/"), "/")
 	actionName := values[0]
 
 	// http://example.com/Controller/Action
@@ -432,6 +437,10 @@ func runMethod(method reflect.Value, c *Controller) {
 	}
 
 	if !c.checkMethodType() {
+		return
+	}
+
+	if c.stopped {
 		return
 	}
 
