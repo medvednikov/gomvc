@@ -125,9 +125,9 @@ we have been notified about it. Sorry for the inconvenience.`)
 		runMethod(method, &c)
 
 		// Run the 'after run' action if it exists
-		afterRun := val.MethodByName("AfterRun_")
-		if afterRun.IsValid() {
-			afterRun.Call([]reflect.Value{})
+		afterAction := val.MethodByName("AfterAction_")
+		if afterAction.IsValid() {
+			afterAction.Call([]reflect.Value{})
 		}
 	}
 }
@@ -138,7 +138,7 @@ func Route(path string, controller interface{}) {
 	if strings.Index(path, "{") == -1 {
 		// General routes without variables. Ensure Gorilla mux matches
 		// all children of path:
-		// Route("/", ...) will also math "/Register", "/User" etc
+		// Route("/", ...) will also match "/Register", "/User" etc
 		router.PathPrefix(path).HandlerFunc(GetHandler(controller))
 	} else {
 		// Custom routes with variables, no need to match children:
@@ -347,22 +347,26 @@ func Run(port string, isDebug bool) {
 // "" => "Index"
 // "Home/Register" => "Register"
 // "Forum/Topic/Hello-world/234242 => "Topic"
-func getActionFromUri(uri string, isIndex bool) string {
+func getActionFromUri(uri, controller string) string {
 	// Root action
 	if uri == "" {
 		return "Index"
 	}
 
-	actionName := uri // example.com/Action
 	values := strings.Split(uri, "/")
+	actionName := values[0]
 
-	// http://example.com/Controller/Action/Arg1/Arg2
+	// http://example.com/Controller/Action
 	if len(values) > 1 { // TODO this is ugly
-		if isIndex {
+		if controller == "Home" {
 			actionName = values[0] // Save action, controller is skipped
+
 		} else {
 			actionName = values[1]
 		}
+	} else if len(values) == 1 && actionName == controller {
+		// /Action => /Action/Index
+		actionName = "Index"
 	}
 
 	// Capitalize and remove unallowed characters
@@ -379,7 +383,7 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	c.Request = r
 	values := r.URL.Query()
 	c.Uri = r.URL.Path[1:]
-	c.ActionName = getActionFromUri(c.Uri, c.ControllerName == "Home")
+	c.ActionName = getActionFromUri(c.Uri, c.ControllerName)
 	if r.Method != "GET" {
 		c.ActionName += "_" + r.Method
 	}
