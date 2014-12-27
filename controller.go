@@ -110,8 +110,11 @@ we have been notified about it. Sorry for the inconvenience.`)
 			parentVal = parentVal.Field(0) // TODO error if nothing was found
 		}
 		c := parentVal.Interface().(Controller)
+
 		c.ControllerName = typ.Name()
 		c.InitValues(w, r)
+		// Since c is copy, not a pointer, need to manually update the
+		// parent controller object TODO
 		parentVal.Set(reflect.ValueOf(c))
 
 		// Run the 'before action' action if it exists
@@ -119,6 +122,11 @@ we have been notified about it. Sorry for the inconvenience.`)
 		if beforeAction.IsValid() {
 			beforeAction.Call([]reflect.Value{})
 		}
+
+		// c contained a copy of the parent controller, so we need to
+		// re-fetch it in case it was updated in BeforeAction.
+		// TODO this is ugly, maybe possible to make it a pointer
+		c = parentVal.Interface().(Controller)
 
 		// Run the actual method
 		method := val.MethodByName(c.ActionName)
@@ -369,7 +377,7 @@ func getActionFromUri(uri, controller string) string {
 		} else {
 			actionName = values[1]
 		}
-	} else if len(values) == 1 && actionName == controller {
+	} else if len(values) == 1 && capitalize(actionName) == controller {
 		// /Action => /Action/Index
 		actionName = "Index"
 	}
