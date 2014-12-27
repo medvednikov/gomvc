@@ -11,14 +11,14 @@ You can run the quick start example with
 
 ```
 cd $GOPATH/src/github.com/medvednikov/gomvc/examples/quickstart &&
-go build quickstart.go && ./quickstart
+go run quickstart.go
 ```
 
-Now visit http://localhost:8088
+Now visit [http://localhost:8088](http://localhost:8088)
 
 ```go
-// controllers/home.go
-package controllers
+// c/home.go
+package c
 
 import "github.com/medvednikov/gomvc"
 
@@ -38,7 +38,7 @@ package main
 
 import (
 	"github.com/medvednikov/gomvc"
-	. "./controllers"
+	. "./c"
 )
 
 func main() {
@@ -60,7 +60,7 @@ Compare using net/http, beego, and gomvc to implement a simple user search page:
 // gomvc
 func (c *Home) UserSearch(name string, age int) {
 	user := usersRepo.FindByNameAndAge(name, age)
-	c.View(user)
+	c.Render(user)
 }
 
 func main() {
