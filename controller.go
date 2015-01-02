@@ -191,7 +191,7 @@ func (c *Controller) Render(data interface{}) {
 			}
 			return
 		}
-		templateCache[templatePath] = template
+		//templateCache[templatePath] = template
 	}
 
 	err = template.Execute(c.Out, data)
@@ -596,7 +596,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// $translation_tag
 	// ===> {{ T "translation_tag" }}
-	r = regexp.MustCompile("\\!([a-zA-Z_]+)")
+	r = regexp.MustCompile("%([a-zA-Z_0-9]+)")
 	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
 
 	// Custom funcs
