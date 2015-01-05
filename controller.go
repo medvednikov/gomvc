@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -276,17 +277,9 @@ func (c *Controller) RenderJson(model interface{}) {
 
 	c.SetContentType("application/json")
 
-	j := struct {
-		Model  interface{}
-		Status string
-	}{
-		Model:  model,
-		Status: "OK",
-	}
-
-	obj, err := json.Marshal(j)
+	obj, err := json.Marshal(model)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
