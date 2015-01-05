@@ -241,6 +241,7 @@ func (c *Controller) SetCookie(key string, value string) {
 		Name:    key,
 		Value:   value,
 		Expires: time.Now().Add(10 * 24 * time.Hour),
+		Path:    "/",
 	})
 }
 
@@ -578,6 +579,10 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	// @* .... *@ ==> {{/*}} .... {{*/}}
 	r := regexp.MustCompile(`@\*(.*?)\*@`)
 	s = r.ReplaceAllString(s, "")
+
+	// @.
+	r = regexp.MustCompile(`@\.`)
+	s = r.ReplaceAllString(s, "{{.}}")
 
 	// @if a
 	// ===> {{ if a }}
