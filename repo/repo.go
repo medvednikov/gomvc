@@ -2,9 +2,10 @@ package repo
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/coopernurse/gorp"
 )
@@ -63,8 +64,11 @@ func Update(u interface{}) error {
 // var user *User
 // repo.SelectOne(&user, "Name=$1 AND Email=$2", name, email)
 func SelectOne(res interface{}, qry string, args ...interface{}) error {
-	err := Dbmap.SelectOne(res, selectWhere(res, qry), args...)
-	h(err)
+	var err error
+	timeout(func() {
+		err = Dbmap.SelectOne(res, selectWhere(res, qry), args...)
+		h(err)
+	})
 	return err
 }
 
@@ -74,9 +78,26 @@ func SelectOne(res interface{}, qry string, args ...interface{}) error {
 // var users []*User
 // repo.Select(&users, "Age > 18")
 func Select(res interface{}, query string, args ...interface{}) error {
-	_, err := Dbmap.Select(res, selectWhere(res, query), args...)
-	h(err)
+	var err error
+	timeout(func() {
+		_, err = Dbmap.Select(res, selectWhere(res, query), args...)
+	})
 	return err
+}
+
+func timeout(fn func()) {
+	c := make(chan bool, 1)
+	go func() {
+		fn()
+		c <- true
+	}()
+	select {
+	case res := <-c:
+		_ = res
+	case <-time.After(time.Millisecond * 500):
+		log.Println("timeout 1 second")
+		fn()
+	}
 }
 
 // selectWhere is a helper method that builds a SELECT * FROM query
@@ -130,7 +151,7 @@ func InitRepo(dbb *sql.DB, tables M) {
 // h handles errors (logs them)
 func h(err error) {
 	if err != nil {
-		fmt.Println("gomvc sql error:", err)
+		log.Println("gomvc sql error:", err)
 		//fmt.Println("query:", queryDebug, "\n")
 		//panic(err)
 	}
