@@ -186,7 +186,7 @@ func (c *Controller) Render(data interface{}) {
 	} else {
 		template, err = parseTemplate(templatePath, c)
 		if err != nil {
-			fmt.Println("Template error: ", err)
+			log.Println("Template error: ", err)
 			if Debug {
 				c.Write("Template error: ", err)
 			}
@@ -197,7 +197,7 @@ func (c *Controller) Render(data interface{}) {
 
 	err = template.Execute(c.Out, data)
 	if err != nil {
-		fmt.Println("Template execution error:", err)
+		log.Println("Template execution error:", err)
 		if Debug {
 			c.Write("Template error:", err)
 		}
@@ -256,6 +256,11 @@ func (c *Controller) SetContentType(ct string) {
 
 func (c *Controller) SetHeader(header, value string) {
 	c.Out.Header().Set(header, value)
+}
+
+func (c *Controller) IsAjax() bool {
+	h := c.Request.Header["X-Requested-With"]
+	return len(h) > 0 && h[0] == "XMLHttpRequest"
 }
 
 func (c *Controller) RenderError(msg string, code int) {
@@ -539,13 +544,17 @@ var defaultFuncs = template.FuncMap{
 // structures and functions, and returns a *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	// Read layout.html
-	layout, err := ioutil.ReadFile("v/layout.html")
-	if err != nil {
-		fmt.Println("Template layout not found", curdir)
-	}
 
-	layoutStr := string(layout)
+	// Read layout.html unless it's an AJAX request
+	layoutStr := ""
+	if !c.IsAjax() {
+		layout, err := ioutil.ReadFile("v/layout.html")
+		if err != nil {
+			fmt.Println("Template layout not found", curdir)
+		}
+
+		layoutStr = string(layout)
+	}
 
 	// Read template file
 	b, err := ioutil.ReadFile(file)
