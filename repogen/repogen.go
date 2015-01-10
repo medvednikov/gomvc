@@ -20,14 +20,13 @@ func main() {
 
 	s := `package m
 
-import (
-	"github.com/medvednikov/gomvc/repo"
-)
+import "github.com/medvednikov/gomvc/repo"
 
 type TYPE struct {
 	Id int
-	
 }
+
+type TYPEs []*TYPE
 
 func RetrieveTYPE(id int) *TYPE {
 	var o *TYPE
