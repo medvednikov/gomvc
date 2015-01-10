@@ -178,7 +178,9 @@ func (c *Controller) Render(data interface{}) {
 
 	var template *template.Template
 	var err error
-	templatePath := "v/" + c.ControllerName + "/" + c.ActionName + ".html"
+	templatePath := "v/" + c.ControllerName + "/" +
+		stripMethodType(c.ActionName) + ".html"
+
 	// Fetch the template from cache, if it's not there - open the file
 	// and parse it
 	if _, ok := templateCache[templatePath]; ok && !Debug {
@@ -722,6 +724,10 @@ func decapitalize(s string) string {
 		return ""
 	}
 	return strings.ToLower(s[:1]) + s[1:]
+}
+
+func stripMethodType(action string) string {
+	return strings.Replace(action, "_POST", "", -1)
 }
 
 func handle(err error) {
