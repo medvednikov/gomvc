@@ -81,8 +81,12 @@ func SelectOne(res interface{}, qry string, args ...interface{}) error {
 // repo.Select(&users, "Age > 18")
 func Select(res interface{}, query string, args ...interface{}) error {
 	var err error
+	if strings.Index(query, "SELECT") == -1 {
+		query = selectWhere(res, query)
+	}
 	timeout(func() {
-		_, err = Dbmap.Select(res, selectWhere(res, query), args...)
+		_, err = Dbmap.Select(res, query, args...)
+		h(err)
 	})
 	return err
 }
