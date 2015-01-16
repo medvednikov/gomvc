@@ -65,10 +65,14 @@ func Update(u interface{}) error {
 // Example:
 // var user *User
 // repo.SelectOne(&user, "Name=$1 AND Email=$2", name, email)
-func SelectOne(res interface{}, qry string, args ...interface{}) error {
+func SelectOne(res interface{}, query string, args ...interface{}) error {
 	var err error
+	if strings.Index(query, "SELECT") == -1 {
+		query = selectWhere(res, query)
+	}
+
 	timeout(func() {
-		err = Dbmap.SelectOne(res, selectWhere(res, qry), args...)
+		err = Dbmap.SelectOne(res, query, args...)
 		h(err)
 	})
 	return err
