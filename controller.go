@@ -600,7 +600,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// @func "param" (always starts with a small letter)
 	// ===> {{ func "param" }}
-	r = regexp.MustCompile(`@([a-z]+( "[^"]+")*)`)
+	r = regexp.MustCompile(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`)
 	s = r.ReplaceAllString(s, "{{ $1 }}")
 
 	// $translation_tag
