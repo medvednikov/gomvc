@@ -88,8 +88,8 @@ func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 					fmt.Fprintln(w, `
 An unhandled error has occurred,
 we have been notified about it. Sorry for the inconvenience.`)
-					fmt.Println("gomvc Error: ", r)
-					fmt.Println(string(debug.Stack()))
+					log.Println("gomvc Error: ", r)
+					log.Println(string(debug.Stack()))
 				}
 			}()
 		}
