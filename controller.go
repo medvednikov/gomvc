@@ -540,6 +540,12 @@ var defaultFuncs = template.FuncMap{
 		}
 		return template.HTML("<link href='" + file + "' rel='stylesheet'>")
 	},
+	"staticjs": func(file string) template.HTML {
+		if strings.Index(file, "//") == -1 {
+			file = "/js/" + file
+		}
+		return template.HTML("<script src='" + file + "'></script>")
+	},
 }
 
 // parseTemplate parses a provided html template file, applies all custom
