@@ -1,6 +1,7 @@
 package gomvc
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -386,6 +387,7 @@ func getActionFromUri(uri, controller string) string {
 	// Capitalize and remove unallowed characters
 	actionName = capitalize(actionName)
 	actionName = strings.Replace(actionName, ".", "", -1)
+	actionName = replaceDashes(actionName)
 
 	return actionName
 }
@@ -734,6 +736,27 @@ func decapitalize(s string) string {
 
 func stripMethodType(action string) string {
 	return strings.Replace(action, "_POST", "", -1)
+}
+
+// hello-world => helloWorld
+func replaceDashes(action string) string {
+	if strings.Index(action, "-") == -1 {
+		return action
+	}
+
+	var res bytes.Buffer
+	for i := 0; i < len(action); i++ {
+		if action[i] == '-' {
+			if i < len(action)-1 {
+				res.WriteString(strings.ToUpper(
+					string(action[i+1])))
+				i++
+			}
+		} else {
+			res.WriteString(string(action[i]))
+		}
+	}
+	return res.String()
 }
 
 func handle(err error) {
