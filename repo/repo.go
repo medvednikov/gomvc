@@ -125,6 +125,12 @@ func FindAll(res interface{}) error {
 	return err
 }
 
+func SelectInt(query string, args ...interface{}) int64 {
+	res, err := Dbmap.SelectInt(query, args...)
+	h(err)
+	return res
+}
+
 // Count executes a given query and returns the number of corresponding rows
 /*
 func Count(query string) int {
