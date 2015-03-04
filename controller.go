@@ -184,6 +184,8 @@ func (c *Controller) Render(data interface{}) {
 		return
 	}
 
+	fmt.Println(c.ControllerName, c.ActionName, "!!!")
+
 	var t *template.Template
 	var err error
 	//templatePath := "v/" + c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
@@ -193,7 +195,7 @@ func (c *Controller) Render(data interface{}) {
 	t = allTemplates.Lookup(templatePath)
 	fmt.Println("GOT T=", t, t.Name())
 	t2, err := t.Clone()
-	fmt.Println(err)
+	fmt.Println("CLONE=", t2.Name(), err)
 
 	//err = allTemplates.Funcs(c.CustomTemplateFuncs).ExecuteTemplate(c.Out, templatePath, data)
 	err = t2.Funcs(c.CustomTemplateFuncs).Execute(c.Out, data)
@@ -716,6 +718,10 @@ func convertTemplate(s string) string {
 	// ===> {{ T "translation_tag" }}
 	r = regexp.MustCompile("%([a-zA-Z_0-9]+)")
 	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
+
+	if strings.Index(s, "room.js") == -1 {
+		s = `{{template "mainheader"}}` + s + `{{template "mainfooter"}}`
+	}
 
 	return s
 }
