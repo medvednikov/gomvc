@@ -562,7 +562,7 @@ var defaultFuncs = template.FuncMap{
 }
 
 func ConvertTemplates(indir, outdir string) error {
-	return filepath.Walk(indir,
+	err := filepath.Walk(indir,
 		func(path string, fi os.FileInfo, err error) error {
 			fmt.Println("PATH=", path)
 			if fi.IsDir() {
@@ -587,6 +587,17 @@ func ConvertTemplates(indir, outdir string) error {
 
 			return nil
 		})
+
+	if err != nil {
+		return err
+	}
+
+	allTemplates, err = template.ParseGlob(outdir + "/*.html")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func convertTemplate(s string) string {
