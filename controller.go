@@ -562,50 +562,15 @@ var defaultFuncs = template.FuncMap{
 }
 
 func ConvertTemplates(indir, outdir string) error {
-	//in, err := os.Open(indir)
-	//if err != nil {
-	//return err
-	//}
-
-	//fis, err := in.Readdir(-1)
-	//if err != nil {
-	//return err
-	//}
-
-	filepath.Walk(indir, func(path string, fi os.FileInfo, err error) error {
-		fmt.Println("PATH=", path)
-		if fi.IsDir() {
-			os.Mkdir(outdir+"/"+path, 0755)
-			return nil
-		}
-
-		b, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		s := string(b)
-
-		s = convertTemplate(s)
-
-		out, err := os.Create(outdir + "/" + path)
-		if err != nil {
-			return err
-		}
-		out.Write([]byte(s))
-		out.Close()
-
-		return nil
-	})
-
-	/*
-		for _, fi := range fis {
-			fmt.Println("FI NAME=", fi.Name())
-
+	return filepath.Walk(indir,
+		func(path string, fi os.FileInfo, err error) error {
+			fmt.Println("PATH=", path)
 			if fi.IsDir() {
-				os.Mkdir(outdir+"/"+fi.Name(), 0755)
-				continue
+				os.Mkdir(outdir+"/"+path, 0755)
+				return nil
 			}
-			b, err := ioutil.ReadFile(indir + "/" + fi.Name())
+
+			b, err := ioutil.ReadFile(path)
 			if err != nil {
 				return err
 			}
@@ -613,17 +578,15 @@ func ConvertTemplates(indir, outdir string) error {
 
 			s = convertTemplate(s)
 
-			out, err := os.Create(outdir + "/" + fi.Name())
+			out, err := os.Create(outdir + "/" + path)
 			if err != nil {
 				return err
 			}
 			out.Write([]byte(s))
 			out.Close()
 
-		}
-	*/
-	return nil
-
+			return nil
+		})
 }
 
 func convertTemplate(s string) string {
