@@ -74,6 +74,8 @@ var (
 	// for future use to improve performance
 	templateCache = make(map[string]*template.Template, 0)
 
+	allTemplates *template.Template
+
 	AssetFunc func(string) ([]byte, error)
 )
 
@@ -179,7 +181,7 @@ func (c *Controller) Render(data interface{}) {
 		return
 	}
 
-	var template *template.Template
+	var t *template.Template
 	var err error
 	templatePath := "v/" + c.ControllerName + "/" +
 		stripMethodType(c.ActionName) + ".html"
@@ -188,11 +190,11 @@ func (c *Controller) Render(data interface{}) {
 	// and parse it
 	if _, ok := templateCache[templatePath]; ok {
 		//if _, ok := templateCache[templatePath]; ok && !Debug {
-		template = templateCache[templatePath]
+		t = templateCache[templatePath]
 		fmt.Println("!!!! USE CACHE")
 	} else {
 		t0 := time.Now()
-		template, err = parseTemplate(templatePath, c)
+		t, err = parseTemplate(templatePath, c)
 		fmt.Println("parse time", time.Now().Sub(t0))
 		if err != nil {
 			log.Println("Template error: ", err)
@@ -201,11 +203,12 @@ func (c *Controller) Render(data interface{}) {
 			}
 			return
 		}
-		//templateCache[templatePath] = template
+		//templateCache[templatePath] = t
 	}
 
 	t0 := time.Now()
-	err = template.Execute(c.Out, data)
+
+	err = t.Execute(c.Out, data)
 	fmt.Println("execute time", time.Now().Sub(t0))
 	if err != nil {
 		log.Println("Template execution error:", err)
@@ -558,6 +561,110 @@ var defaultFuncs = template.FuncMap{
 	},
 }
 
+func ConvertTemplates(indir, outdir string) error {
+	//in, err := os.Open(indir)
+	//if err != nil {
+	//return err
+	//}
+
+	//fis, err := in.Readdir(-1)
+	//if err != nil {
+	//return err
+	//}
+
+	filepath.Walk(indir, func(path string, fi os.FileInfo, err error) error {
+		fmt.Println("PATH=", path)
+		if fi.IsDir() {
+			os.Mkdir(outdir+"/"+path, 0755)
+			return nil
+		}
+
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		s := string(b)
+
+		s = convertTemplate(s)
+
+		out, err := os.Create(outdir + "/" + path)
+		if err != nil {
+			return err
+		}
+		out.Write([]byte(s))
+		out.Close()
+
+		return nil
+	})
+
+	/*
+		for _, fi := range fis {
+			fmt.Println("FI NAME=", fi.Name())
+
+			if fi.IsDir() {
+				os.Mkdir(outdir+"/"+fi.Name(), 0755)
+				continue
+			}
+			b, err := ioutil.ReadFile(indir + "/" + fi.Name())
+			if err != nil {
+				return err
+			}
+			s := string(b)
+
+			s = convertTemplate(s)
+
+			out, err := os.Create(outdir + "/" + fi.Name())
+			if err != nil {
+				return err
+			}
+			out.Write([]byte(s))
+			out.Close()
+
+		}
+	*/
+	return nil
+
+}
+
+func convertTemplate(s string) string {
+	// Title
+	//s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
+	s = strings.Replace(s, "\n\n", "\n", -1)
+	s = strings.Replace(s, "\t", "", -1)
+	s = strings.Replace(s, "  ", "", -1)
+
+	// Comments
+	// @* .... *@ ==> {{/*}} .... {{*/}}
+	r := regexp.MustCompile(`@\*(.*?)\*@`)
+	s = r.ReplaceAllString(s, "")
+
+	// @.
+	r = regexp.MustCompile(`@\.`)
+	s = r.ReplaceAllString(s, "{{.}}")
+
+	// @if a
+	// ===> {{ if a }}
+	r = regexp.MustCompile("@(if|else|end|range|template|define)(.*?)\n")
+	s = r.ReplaceAllString(s, "{{ $1 $2 }}\n")
+
+	// @Name (always starts with a capital letter)
+	// ===> {{ .Name }}
+	r = regexp.MustCompile("@([A-Z][a-zA-Z\\.]+)")
+	s = r.ReplaceAllString(s, "{{.$1}}")
+
+	// @func "param" (always starts with a small letter)
+	// ===> {{ func "param" }}
+	r = regexp.MustCompile(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`)
+	s = r.ReplaceAllString(s, "{{ $1 }}")
+
+	// %translation_tag
+	// ===> {{ T "translation_tag" }}
+	r = regexp.MustCompile("%([a-zA-Z_0-9]+)")
+	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
+
+	return s
+}
+
 // parseTemplate parses a provided html template file, applies all custom
 // structures and functions, and returns a *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
@@ -567,7 +674,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	layoutStr := ""
 	if !c.IsAjax() {
 		layout, err := AssetFunc("v/layout.html")
-		if err != nil {
+		if err != nil || Debug {
 			layout, err = ioutil.ReadFile("v/layout.html")
 		}
 		if err != nil {
@@ -581,7 +688,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	data, err := AssetFunc(file)
 	//fmt.Println("GOT ASSET", len(data), err)
-	if err == nil && len(data) > 0 {
+	if err == nil && len(data) > 0 && !Debug {
 		fmt.Println("GOT FROM BINARY")
 		s = string(data)
 	} else {
@@ -595,6 +702,7 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	}
 
 	// Embed the template into layout
+	t0 := time.Now()
 	if layoutStr != "" {
 		s = strings.Replace(layoutStr, "$BODY", s, -1)
 	}
@@ -636,8 +744,11 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 
 	// Custom funcs
 	t := template.New(file).Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
+	//t := template.New(file).Funcs(defaultFuncs)
+	fmt.Println("T replaces", time.Now().Sub(t0))
 
 	t2, err := t.Parse(s)
+	fmt.Println("T replaces", time.Now().Sub(t0))
 	return t2, err
 }
 
