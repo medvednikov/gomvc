@@ -73,6 +73,8 @@ var (
 	// Template cache. Once a template file is parsed, the result is saved
 	// for future use to improve performance
 	templateCache = make(map[string]*template.Template, 0)
+
+	AssetFunc func(string) ([]byte, error)
 )
 
 // GetHandler generates a net/http handler func from a controller type.
@@ -184,10 +186,14 @@ func (c *Controller) Render(data interface{}) {
 
 	// Fetch the template from cache, if it's not there - open the file
 	// and parse it
-	if _, ok := templateCache[templatePath]; ok && !Debug {
+	if _, ok := templateCache[templatePath]; ok {
+		//if _, ok := templateCache[templatePath]; ok && !Debug {
 		template = templateCache[templatePath]
+		fmt.Println("!!!! USE CACHE")
 	} else {
+		t0 := time.Now()
 		template, err = parseTemplate(templatePath, c)
+		fmt.Println("parse time", time.Now().Sub(t0))
 		if err != nil {
 			log.Println("Template error: ", err)
 			if Debug {
@@ -198,7 +204,9 @@ func (c *Controller) Render(data interface{}) {
 		//templateCache[templatePath] = template
 	}
 
+	t0 := time.Now()
 	err = template.Execute(c.Out, data)
+	fmt.Println("execute time", time.Now().Sub(t0))
 	if err != nil {
 		log.Println("Template execution error:", err)
 		if Debug {
@@ -558,23 +566,33 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	// Read layout.html unless it's an AJAX request
 	layoutStr := ""
 	if !c.IsAjax() {
-		layout, err := ioutil.ReadFile("v/layout.html")
+		layout, err := AssetFunc("v/layout.html")
 		if err != nil {
-			fmt.Println("Template layout not found", curdir)
+			layout, err = ioutil.ReadFile("v/layout.html")
+		}
+		if err != nil {
+			log.Println("Template layout not found", curdir)
 		}
 
 		layoutStr = string(layout)
 	}
 
-	// Read template file
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		fmt.Println("Template '", file, "' is not found!", curdir)
-	}
-	s := string(b)
+	s := ""
 
-	// TODO read from compiled cache
-	//data, _ := Asset("temp/template.html")
+	data, err := AssetFunc(file)
+	//fmt.Println("GOT ASSET", len(data), err)
+	if err == nil && len(data) > 0 {
+		fmt.Println("GOT FROM BINARY")
+		s = string(data)
+	} else {
+
+		// Read template file
+		b, err := ioutil.ReadFile(file)
+		if err != nil {
+			log.Println("Template '", file, "' is not found!", curdir)
+		}
+		s = string(b)
+	}
 
 	// Embed the template into layout
 	if layoutStr != "" {
