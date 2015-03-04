@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/housinganywhere/ha/util"
 )
 
 // Controller is the core type of gomvc
@@ -175,6 +176,8 @@ func (c *Controller) Index() {
     `)
 }
 
+//var Context
+
 // View executes a template corresponding to the current controller method
 func (c *Controller) Render(data interface{}) {
 	if c.stopped {
@@ -185,6 +188,11 @@ func (c *Controller) Render(data interface{}) {
 	var err error
 	templatePath := "v/" + c.ControllerName + "/" +
 		stripMethodType(c.ActionName) + ".html"
+
+	fmt.Println("RENDER ", templatePath)
+	err = allTemplates.ExecuteTemplate(c.Out, templatePath, data)
+	fmt.Println("Er=", err)
+	return
 
 	// Fetch the template from cache, if it's not there - open the file
 	// and parse it
@@ -559,13 +567,69 @@ var defaultFuncs = template.FuncMap{
 		}
 		return template.HTML("<script src='" + file + "'></script>")
 	},
+	///////////////
+	// placeholders
+	///////////////
+	"lang": func() string {
+		return "en"
+	},
+	"user": func() interface{} {
+		return nil
+	},
+	"isdev": func() bool {
+		return util.IsDev
+	},
+	"currencies": func() []string {
+		return nil
+	},
+	"time": func(t time.Time) string {
+		return util.FormatDate(t)
+	},
+	"yymmdd": func(t time.Time) string {
+		return util.YYMMDD(t)
+	},
+	"yymmdd_hm": func(t time.Time) string {
+		return util.YYMMDD_HM(t)
+	},
+	"today_yymmdd": func() string {
+		return util.YYMMDD(time.Now())
+	},
+	// Returns s if m[key] = val
+	"ifmapval": func(m map[string]string, key, val, s string) string {
+		if m[key] == val {
+			return s
+		}
+		return ""
+	},
+	// Returns m[key]
+	"mapval": func(m map[string]string, key string) string {
+		return m[key]
+	},
+	"raw": func(s string) template.HTML {
+		return template.HTML(s)
+	},
+
+	//"T": func(key string, args ...interface{}) template.HTML {
+	//return template.HTML(T(key, args))
+	//},
+	"T": func(key string, args ...interface{}) template.HTML {
+		return template.HTML("")
+	},
+	"pretty": func(s string) template.HTML {
+		s = strings.Replace(s, "\n", "<br />", -1)
+		return template.HTML(s)
+	},
 }
 
 func ConvertTemplates(indir, outdir string) error {
+	files := make([]string, 0)
+	curdir := "v"
 	err := filepath.Walk(indir,
 		func(path string, fi os.FileInfo, err error) error {
 			fmt.Println("PATH=", path)
 			if fi.IsDir() {
+				curdir = fi.Name()
+				fmt.Println("NEW CURDIR=", curdir)
 				os.Mkdir(outdir+"/"+path, 0755)
 				return nil
 			}
@@ -578,12 +642,15 @@ func ConvertTemplates(indir, outdir string) error {
 
 			s = convertTemplate(s)
 
-			out, err := os.Create(outdir + "/" + path)
+			filename := outdir + "/" + curdir + fi.Name()
+			out, err := os.Create(filename)
 			if err != nil {
 				return err
 			}
 			out.Write([]byte(s))
 			out.Close()
+
+			files = append(files, filename)
 
 			return nil
 		})
@@ -592,7 +659,14 @@ func ConvertTemplates(indir, outdir string) error {
 		return err
 	}
 
-	allTemplates, err = template.ParseGlob(outdir + "/*.html")
+	allTemplates, err = template.New("root").Funcs(defaultFuncs).
+		//ParseGlob(outdir + "/v/**/*.html")
+		ParseFiles(files...)
+	fmt.Println("ERR=", err)
+	fmt.Println("ALL T=", util.Dump(allTemplates))
+	for _, tt := range allTemplates.Templates() {
+		fmt.Println("!!", tt.Name())
+	}
 	if err != nil {
 		return err
 	}
@@ -642,6 +716,17 @@ func convertTemplate(s string) string {
 // parseTemplate parses a provided html template file, applies all custom
 // structures and functions, and returns a *template.Template object
 func parseTemplate(file string, c *Controller) (*template.Template, error) {
+	//allTemplates.P
+	/*
+		t := template.New(file).Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
+		//t := template.New(file).Funcs(defaultFuncs)
+		fmt.Println("T replaces", time.Now().Sub(t0))
+
+		t2, err := t.Parse(s)
+		fmt.Println("T replaces", time.Now().Sub(t0))
+		return t2, err
+	*/
+
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	// Read layout.html unless it's an AJAX request
