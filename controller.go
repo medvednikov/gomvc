@@ -186,11 +186,17 @@ func (c *Controller) Render(data interface{}) {
 
 	var t *template.Template
 	var err error
-	templatePath := "v/" + c.ControllerName + "/" +
-		stripMethodType(c.ActionName) + ".html"
+	//templatePath := "v/" + c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
+	templatePath := c.ControllerName + stripMethodType(c.ActionName) + ".html"
 
 	fmt.Println("RENDER ", templatePath)
-	err = allTemplates.ExecuteTemplate(c.Out, templatePath, data)
+	t = allTemplates.Lookup(templatePath)
+	fmt.Println("GOT T=", t, t.Name())
+	t2, err := t.Clone()
+	fmt.Println(err)
+
+	//err = allTemplates.Funcs(c.CustomTemplateFuncs).ExecuteTemplate(c.Out, templatePath, data)
+	err = t2.Funcs(c.CustomTemplateFuncs).Execute(c.Out, data)
 	fmt.Println("Er=", err)
 	return
 
@@ -677,9 +683,10 @@ func ConvertTemplates(indir, outdir string) error {
 func convertTemplate(s string) string {
 	// Title
 	//s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
-	s = strings.Replace(s, "\n\n", "\n", -1)
-	s = strings.Replace(s, "\t", "", -1)
-	s = strings.Replace(s, "  ", "", -1)
+
+	//s = strings.Replace(s, "\n\n", "\n", -1)
+	//s = strings.Replace(s, "\t", "", -1)
+	//s = strings.Replace(s, "  ", "", -1)
 
 	// Comments
 	// @* .... *@ ==> {{/*}} .... {{*/}}
