@@ -170,7 +170,9 @@ func InitRepo(dbb *sql.DB, tables M) {
 // h handles errors (logs them)
 func h(err error) {
 	if err != nil {
-		log.Println("gomvc sql error:", err)
+		if strings.Index(err.Error(), "no rows in result set") == -1 {
+			log.Println("gomvc sql error:", err)
+		}
 		//fmt.Println("query:", queryDebug, "\n")
 		//panic(err)
 	}

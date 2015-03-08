@@ -70,9 +70,11 @@ var (
 
 	TimeStamp int64
 
-	// Template cache. Once a template file is parsed, the result is saved
-	// for future use to improve performance
-	templateCache = make(map[string]*template.Template, 0)
+	// All templates are stored in memory
+	allTemplates  *template.Template
+	TemplateFuncs template.FuncMap
+
+	AssetFunc func(string) ([]byte, error)
 )
 
 // GetHandler generates a net/http handler func from a controller type.
@@ -177,33 +179,27 @@ func (c *Controller) Render(data interface{}) {
 		return
 	}
 
-	var template *template.Template
-	var err error
-	templatePath := "v/" + c.ControllerName + "/" +
-		stripMethodType(c.ActionName) + ".html"
-
-	// Fetch the template from cache, if it's not there - open the file
-	// and parse it
-	if _, ok := templateCache[templatePath]; ok && !Debug {
-		template = templateCache[templatePath]
-	} else {
-		template, err = parseTemplate(templatePath, c)
-		if err != nil {
-			log.Println("Template error: ", err)
-			if Debug {
-				c.Write("Template error: ", err)
-			}
-			return
-		}
-		//templateCache[templatePath] = template
+	// Reload all templates in dev so that server restart is not required
+	if Debug {
+		ConvertTemplates()
 	}
 
-	err = template.Execute(c.Out, data)
+	templatePath := c.ControllerName + "/" +
+		stripMethodType(c.ActionName) + ".html"
+	t := allTemplates.Lookup(templatePath)
+	if t == nil {
+		log.Println("Template lookup failed for", templatePath)
+		return
+	}
+	t2, err := t.Clone()
+
+	err = t2.Funcs(c.CustomTemplateFuncs).Execute(c.Out, data)
 	if err != nil {
 		log.Println("Template execution error:", err)
 		if Debug {
-			c.Write("Template error:", err)
+			c.Write("Template execution error:", err)
 		}
+		return
 	}
 }
 
@@ -311,7 +307,7 @@ func (c *Controller) RenderJsonError(errorMsg string) {
 
 	obj, err := json.Marshal(j) // TODO
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
@@ -550,42 +546,54 @@ var defaultFuncs = template.FuncMap{
 	},
 }
 
-// parseTemplate parses a provided html template file, applies all custom
-// structures and functions, and returns a *template.Template object
-func parseTemplate(file string, c *Controller) (*template.Template, error) {
-	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+// Converts custom templates located in v/ to Go HTML templates.
+func ConvertTemplates() {
+	allTemplates = template.New("root").Funcs(defaultFuncs).Funcs(TemplateFuncs)
+	err := filepath.Walk("v",
+		func(path string, fi os.FileInfo, err error) error {
+			if fi.IsDir() {
+				return nil
+			}
 
-	// Read layout.html unless it's an AJAX request
-	layoutStr := ""
-	if !c.IsAjax() {
-		layout, err := ioutil.ReadFile("v/layout.html")
-		if err != nil {
-			fmt.Println("Template layout not found", curdir)
-		}
+			filename := strings.Replace(path, "v/", "", -1) // TODO
+			var b []byte
 
-		layoutStr = string(layout)
-	}
+			// Try compiled template on prod
+			if !Debug && AssetFunc != nil {
+				b, _ = AssetFunc(filename)
+			}
 
-	// Read template file
-	b, err := ioutil.ReadFile(file)
+			// Read custom template file
+			if len(b) == 0 {
+				b, err = ioutil.ReadFile(path)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Convert it
+			s := string(b)
+			s = convertTemplate(s)
+
+			// Parse it and append to allTemplates
+			tmpl := allTemplates.New(filename)
+			_, err = tmpl.Parse(s)
+			return err
+		})
+
 	if err != nil {
-		fmt.Println("Template '", file, "' is not found!", curdir)
+		log.Fatal("Template parsing error: ", err)
 	}
-	s := string(b)
+}
 
-	// TODO read from compiled cache
-	//data, _ := Asset("temp/template.html")
-
-	// Embed the template into layout
-	if layoutStr != "" {
-		s = strings.Replace(layoutStr, "$BODY", s, -1)
-	}
-
+// convertTemplate applies custom structures and functions
+func convertTemplate(s string) string {
 	// Title
-	s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
-	s = strings.Replace(s, "\n\n", "\n", -1)
-	s = strings.Replace(s, "\t", "", -1)
-	s = strings.Replace(s, "  ", "", -1)
+	//s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
+
+	//s = strings.Replace(s, "\n\n", "\n", -1)
+	//s = strings.Replace(s, "\t", "", -1)
+	//s = strings.Replace(s, "  ", "", -1)
 
 	// Comments
 	// @* .... *@ ==> {{/*}} .... {{*/}}
@@ -611,16 +619,16 @@ func parseTemplate(file string, c *Controller) (*template.Template, error) {
 	r = regexp.MustCompile(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`)
 	s = r.ReplaceAllString(s, "{{ $1 }}")
 
-	// $translation_tag
+	// %translation_tag
 	// ===> {{ T "translation_tag" }}
 	r = regexp.MustCompile("%([a-zA-Z_0-9]+)")
 	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
 
-	// Custom funcs
-	t := template.New(file).Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
+	if strings.Index(s, "room.js") == -1 {
+		s = `{{template "mainheader"}}` + s + `{{template "mainfooter"}}`
+	}
 
-	t2, err := t.Parse(s)
-	return t2, err
+	return s
 }
 
 // getActionsFromSourceFiles parses all controller source files and fetches
