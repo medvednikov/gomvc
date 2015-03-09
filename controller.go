@@ -74,7 +74,8 @@ var (
 	allTemplates  *template.Template
 	TemplateFuncs template.FuncMap
 
-	AssetFunc func(string) ([]byte, error)
+	AssetFunc  func(string) ([]byte, error)
+	AssetNames []string
 )
 
 // GetHandler generates a net/http handler func from a controller type.
@@ -342,6 +343,7 @@ func ServeStatic(prefix, dir string) {
 func Run(port string, isDebug bool) {
 	Debug = isDebug
 	TimeStamp = time.Now().Unix()
+	ConvertTemplates()
 	fmt.Println("Starting a gomvc app on port ", port, " with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
@@ -549,36 +551,37 @@ var defaultFuncs = template.FuncMap{
 // Converts custom templates located in v/ to Go HTML templates.
 func ConvertTemplates() {
 	allTemplates = template.New("root").Funcs(defaultFuncs).Funcs(TemplateFuncs)
+
+	// Try compiled template on prod
+	if !Debug && AssetFunc != nil {
+		for _, assetName := range AssetNames {
+			b, err := AssetFunc(assetName)
+			if err != nil {
+				log.Println("Asset error", err)
+				continue
+			}
+
+			convertTemplate(b, assetName)
+		}
+		return
+	}
+
+	// Read template files on dev
 	err := filepath.Walk("v",
 		func(path string, fi os.FileInfo, err error) error {
-			if fi.IsDir() {
+			if fi != nil && fi.IsDir() {
 				return nil
 			}
 
 			filename := strings.Replace(path, "v/", "", -1) // TODO
-			var b []byte
-
-			// Try compiled template on prod
-			if !Debug && AssetFunc != nil {
-				b, _ = AssetFunc(filename)
-			}
 
 			// Read custom template file
-			if len(b) == 0 {
-				b, err = ioutil.ReadFile(path)
-				if err != nil {
-					return err
-				}
+			b, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
 			}
 
-			// Convert it
-			s := string(b)
-			s = convertTemplate(s)
-
-			// Parse it and append to allTemplates
-			tmpl := allTemplates.New(filename)
-			_, err = tmpl.Parse(s)
-			return err
+			return convertTemplate(b, filename)
 		})
 
 	if err != nil {
@@ -587,7 +590,8 @@ func ConvertTemplates() {
 }
 
 // convertTemplate applies custom structures and functions
-func convertTemplate(s string) string {
+func convertTemplate(b []byte, filename string) error {
+	s := string(b)
 	// Title
 	//s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
 
@@ -628,7 +632,10 @@ func convertTemplate(s string) string {
 		s = `{{template "mainheader"}}` + s + `{{template "mainfooter"}}`
 	}
 
-	return s
+	// Parse it and append to allTemplates
+	tmpl := allTemplates.New(filename)
+	_, err := tmpl.Parse(s)
+	return err
 }
 
 // getActionsFromSourceFiles parses all controller source files and fetches
