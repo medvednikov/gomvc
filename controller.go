@@ -182,7 +182,7 @@ func (c *Controller) Render(data interface{}) {
 
 	// Reload all templates in dev so that server restart is not required
 	if Debug {
-		ConvertTemplates()
+		ProcessTemplates()
 	}
 
 	templatePath := c.ControllerName + "/" +
@@ -343,7 +343,7 @@ func ServeStatic(prefix, dir string) {
 func Run(port string, isDebug bool) {
 	Debug = isDebug
 	TimeStamp = time.Now().Unix()
-	ConvertTemplates()
+	ProcessTemplates()
 	fmt.Println("Starting a gomvc app on port ", port, " with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
@@ -548,8 +548,9 @@ var defaultFuncs = template.FuncMap{
 	},
 }
 
-// Converts custom templates located in v/ to Go HTML templates.
-func ConvertTemplates() {
+// ProcessTemplates converts custom templates located in v/ (binary assets on
+// production) to Go HTML templates and stores them in allTemplates
+func ProcessTemplates() {
 	allTemplates = template.New("root").Funcs(defaultFuncs).Funcs(TemplateFuncs)
 
 	// Try compiled template on prod
@@ -561,7 +562,7 @@ func ConvertTemplates() {
 				continue
 			}
 
-			convertTemplate(b, assetName)
+			processTemplate(b, assetName)
 		}
 		return
 	}
@@ -581,7 +582,7 @@ func ConvertTemplates() {
 				return err
 			}
 
-			return convertTemplate(b, filename)
+			return processTemplate(b, filename)
 		})
 
 	if err != nil {
@@ -589,8 +590,9 @@ func ConvertTemplates() {
 	}
 }
 
-// convertTemplate applies custom structures and functions
-func convertTemplate(b []byte, filename string) error {
+// processTemplate applies custom structures and functions to a templates file,
+// parses it and appends it to allTemplates
+func processTemplate(b []byte, filename string) error {
 	s := string(b)
 	// Title
 	//s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
@@ -633,8 +635,7 @@ func convertTemplate(b []byte, filename string) error {
 	}
 
 	// Parse it and append to allTemplates
-	tmpl := allTemplates.New(filename)
-	_, err := tmpl.Parse(s)
+	_, err := allTemplates.New(filename).Parse(s)
 	return err
 }
 
