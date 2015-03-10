@@ -60,6 +60,12 @@ func Update(u interface{}) error {
 	return err
 }
 
+func Exec(query string, args ...interface{}) error {
+	_, err := Dbmap.Exec(query)
+	h(err)
+	return err
+}
+
 // SelectOne searches for a row using a given query and binds the result to a
 // given object
 // Example:
