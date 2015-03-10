@@ -61,7 +61,7 @@ func Update(u interface{}) error {
 }
 
 func Exec(query string, args ...interface{}) error {
-	_, err := Dbmap.Exec(query)
+	_, err := Dbmap.Exec(query, args...)
 	h(err)
 	return err
 }
