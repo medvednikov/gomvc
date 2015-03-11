@@ -52,7 +52,6 @@ var defaultFuncs = template.FuncMap{
 // readTemplate reads a template file on dev, or an asset file on production
 // and returns its contents
 func readTemplate(path string) string {
-
 	if !Debug && AssetFunc != nil {
 		b, err := AssetFunc(path)
 		if err != nil {
@@ -76,26 +75,18 @@ func readTemplate(path string) string {
 func convertTemplate(b []byte) string {
 	s := string(b)
 
-	r := regexp.MustCompile(`@\*(.*?)\*@`)
-	s = r.ReplaceAllString(s, "")
+	rreplace := func(r, replaceWith string) {
+		reg := regexp.MustCompile(r)
+		s = reg.ReplaceAllString(s, replaceWith)
+	}
 
-	r = regexp.MustCompile(`@t ([a-zA-Z_0-9]+)`)
-	s = r.ReplaceAllString(s, `{{template "$1"}}`)
-
-	r = regexp.MustCompile(`@\.`)
-	s = r.ReplaceAllString(s, "{{.}}")
-
-	r = regexp.MustCompile("@(if|else|end|range|template|define)(.*?)\n")
-	s = r.ReplaceAllString(s, "{{ $1 $2 }}\n")
-
-	r = regexp.MustCompile("@([A-Z][a-zA-Z\\.]+)")
-	s = r.ReplaceAllString(s, "{{.$1}}")
-
-	r = regexp.MustCompile(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`)
-	s = r.ReplaceAllString(s, "{{ $1 }}")
-
-	r = regexp.MustCompile("%([a-zA-Z_0-9]+)")
-	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
+	rreplace(`@\*(.*?)\*@`, "")
+	rreplace(`@t ([a-zA-Z_0-9]+)`, `{{template "$1"}}`)
+	rreplace(`@\.`, "{{.}}")
+	rreplace("@(if|else|end|range|template|define)(.*?)\n", "{{ $1 $2 }}\n")
+	rreplace("@([A-Z][a-zA-Z\\.]+)", "{{.$1}}")
+	rreplace(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`, "{{ $1 }}")
+	rreplace("%([a-zA-Z_0-9]+)", `{{ T "$1" }}`)
 
 	return s
 }
