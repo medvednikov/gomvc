@@ -489,6 +489,8 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 			switch field.Type().Name() {
 			case "int":
 				field.SetInt(int64(toint(formValue)))
+			case "float64":
+				field.SetFloat(tofloat(formValue))
 			case "string":
 				field.SetString(formValue)
 			}
@@ -704,6 +706,11 @@ func dump(val interface{}) string {
 
 func toint(s string) int {
 	res, _ := strconv.Atoi(s)
+	return res
+}
+
+func tofloat(s string) float64 {
+	res, _ := strconv.ParseFloat(s, 64)
 	return res
 }
 
