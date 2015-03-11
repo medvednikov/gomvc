@@ -70,9 +70,6 @@ var (
 
 	TimeStamp int64
 
-	// All templates are stored in memory
-	TemplateFuncs template.FuncMap
-
 	AssetFunc  func(string) ([]byte, error)
 	AssetNames []string
 )
@@ -584,6 +581,10 @@ func convertTemplate(b []byte) string {
 	r := regexp.MustCompile(`@\*(.*?)\*@`)
 	s = r.ReplaceAllString(s, "")
 
+	// @t name ===> {{ template "name" }}
+	r = regexp.MustCompile(`@t ([a-zA-Z_0-9]+)`)
+	s = r.ReplaceAllString(s, `{{template "$1"}}`)
+
 	// @.
 	r = regexp.MustCompile(`@\.`)
 	s = r.ReplaceAllString(s, "{{.}}")
@@ -607,10 +608,6 @@ func convertTemplate(b []byte) string {
 	// ===> {{ T "translation_tag" }}
 	r = regexp.MustCompile("%([a-zA-Z_0-9]+)")
 	s = r.ReplaceAllString(s, `{{ T "$1" }}`)
-
-	if strings.Index(s, "room.js") == -1 {
-		s = `{{template "mainheader"}}` + s + `{{template "mainfooter"}}`
-	}
 
 	return s
 }
