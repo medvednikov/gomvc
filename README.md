@@ -3,9 +3,6 @@
 This is a simple MVC-ish web framework for Go, which is basically a small
 wrapper around Go's net/http.
 
-It supports PostgreSQL via [gorp](https://github.com/coopernurse/gorp), and
-more databases will be added in the future.
-
 ## Key features ##
 
 The key features of gomvc are ease of use, lack of clutter, and a very simple
@@ -17,7 +14,7 @@ Compare using net/http, beego, and gomvc to implement a simple user search page:
 ```go
 // gomvc
 func (c *Home) UserSearch(name string, age int) {
-	user := usersRepo.FindByNameAndAge(name, age)
+	user := findByNameAndAge(name, age)
 	c.Render(user)
 }
 
@@ -33,7 +30,7 @@ func userSearch(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	age, _ := strconv.Atoi(r.URL.Query().Get("age"))
 
-	user := usersRepo.FindByNameAndAge(name, age)
+	user := findByNameAndAge(name, age)
 
 	t, _ := template.ParseFiles("usersearch.html")
 	t.Execute(w, user)
@@ -50,7 +47,7 @@ func main() {
 func (this *MainController) Get() {
 	name := this.GetString("name")
 	age := int(this.GetInt("age"))
-	user := usersRepo.FindByNameAndAge(name, age)
+	user := findByNameAndAge(name, age)
 	this.Data["user"] = user
 }
 
@@ -61,9 +58,6 @@ func main() {
 ```
 
 ## Installation ##
-
-    # Install dependencies:
-    go get github.com/coopernurse/gorp
 
     # Install the package:
     go get github.com/medvednikov/gomvc
