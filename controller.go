@@ -71,7 +71,6 @@ var (
 	TimeStamp int64
 
 	// All templates are stored in memory
-	allTemplates  *template.Template
 	TemplateFuncs template.FuncMap
 
 	AssetFunc  func(string) ([]byte, error)
@@ -179,22 +178,23 @@ func (c *Controller) Render(data interface{}) {
 	if c.stopped {
 		return
 	}
+	t := template.New("root").Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
 
-	// Reload all templates in dev so that server restart is not required
-	if Debug {
-		ProcessTemplates()
+	// Parse layout file with all subtemplates first
+	_, err := t.New("layout.html").Parse(readTemplate("layout.html"))
+	if err != nil {
+		log.Fatal("Layout template parsing error", err)
 	}
 
-	templatePath := c.ControllerName + "/" +
-		stripMethodType(c.ActionName) + ".html"
-	t := allTemplates.Lookup(templatePath)
-	if t == nil {
-		log.Println("Template lookup failed for", templatePath)
-		return
+	// Now parse the actual template file corresponding to the action
+	path := c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
+	_, err = t.New(path).Parse(readTemplate(path))
+	if err != nil {
+		log.Fatal("Template parsing error", err)
 	}
-	t2, err := t.Clone()
 
-	err = t2.Funcs(c.CustomTemplateFuncs).Execute(c.Out, data)
+	// Finally, execute it
+	err = t.ExecuteTemplate(c.Out, path, data)
 	if err != nil {
 		log.Println("Template execution error:", err)
 		if Debug {
@@ -343,7 +343,6 @@ func ServeStatic(prefix, dir string) {
 func Run(port string, isDebug bool) {
 	Debug = isDebug
 	TimeStamp = time.Now().Unix()
-	ProcessTemplates()
 	fmt.Println("Starting a gomvc app on port ", port, " with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
@@ -503,10 +502,8 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 		// Convert to int if this argument is an int, otherwise leave
 		// it as a string TODO more types?
 		return reflect.ValueOf(toint(stringValue))
-	} else {
-		return reflect.ValueOf(stringValue)
 	}
-	return reflect.Value{}
+	return reflect.ValueOf(stringValue)
 }
 
 // Custom html/template functions
@@ -548,51 +545,32 @@ var defaultFuncs = template.FuncMap{
 	},
 }
 
-// ProcessTemplates converts custom templates located in v/ (binary assets on
-// production) to Go HTML templates and stores them in allTemplates
-func ProcessTemplates() {
-	allTemplates = template.New("root").Funcs(defaultFuncs).Funcs(TemplateFuncs)
-
+// readTemplate reads a template file on dev, or an asset file on production
+// and returns its contents
+func readTemplate(path string) string {
 	// Try compiled template on prod
 	if !Debug && AssetFunc != nil {
-		for _, assetName := range AssetNames {
-			b, err := AssetFunc(assetName)
-			if err != nil {
-				log.Println("Asset error", err)
-				continue
-			}
-
-			processTemplate(b, assetName)
+		b, err := AssetFunc(path)
+		if err != nil {
+			log.Println("Asset error", err)
+			return ""
 		}
-		return
+		return convertTemplate(b)
 	}
 
-	// Read template files on dev
-	err := filepath.Walk("v",
-		func(path string, fi os.FileInfo, err error) error {
-			if fi != nil && fi.IsDir() {
-				return nil
-			}
-
-			filename := strings.Replace(path, "v/", "", -1) // TODO
-
-			// Read custom template file
-			b, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			return processTemplate(b, filename)
-		})
-
+	// Read custom template file on dev
+	b, err := ioutil.ReadFile("v/" + path)
 	if err != nil {
-		log.Fatal("Template parsing error: ", err)
+		log.Println("Reading template error", err)
+		return ""
 	}
+
+	return convertTemplate(b)
 }
 
-// processTemplate applies custom structures and functions to a templates file,
-// parses it and appends it to allTemplates
-func processTemplate(b []byte, filename string) error {
+// convertTemplate applies custom structures and functions and converts a
+// custom template to Go's HTML template
+func convertTemplate(b []byte) string {
 	s := string(b)
 	// Title
 	//s = strings.Replace(s, "$_ez_TITLE", c.PageTitle, -1)
@@ -634,9 +612,7 @@ func processTemplate(b []byte, filename string) error {
 		s = `{{template "mainheader"}}` + s + `{{template "mainfooter"}}`
 	}
 
-	// Parse it and append to allTemplates
-	_, err := allTemplates.New(filename).Parse(s)
-	return err
+	return s
 }
 
 // getActionsFromSourceFiles parses all controller source files and fetches
