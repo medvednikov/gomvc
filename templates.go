@@ -25,6 +25,15 @@ var defaultFuncs = template.FuncMap{
 		if strings.Index(file, "//") == -1 {
 			file = "/js/" + file
 		}
+		pos := strings.LastIndex(file, ".js")
+		if pos == -1 {
+			log.Println(file, "is not a JavaScript file")
+			return template.HTML("")
+		}
+		// Use minified JS on production
+		if !Debug {
+			file = file[:pos] + ".min.js"
+		}
 		file += fmt.Sprintf("?%d", TimeStamp)
 		return template.HTML("<script src='" + file + "'></script>")
 	},
