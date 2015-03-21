@@ -97,5 +97,10 @@ func convertTemplate(b []byte) string {
 	rreplace(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`, "{{ $1 }}")
 	rreplace("%([a-zA-Z_0-9]+)", `{{ T "$1" }}`)
 
+	if !Debug {
+		s = strings.Replace(s, "\n", " ", -1)
+		s = strings.Replace(s, "\t", " ", -1)
+	}
+
 	return s
 }
