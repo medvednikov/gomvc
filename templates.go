@@ -93,7 +93,7 @@ func convertTemplate(b []byte) string {
 	rreplace(`@t ([a-zA-Z_0-9]+)`, `{{template "$1"}}`)
 	rreplace(`@\.`, "{{.}}")
 	rreplace("@(if|else|end|range|template|define)(.*?)\n", "{{ $1 $2 }}\n")
-	rreplace("@([A-Z][a-zA-Z\\.]+)", "{{.$1}}")
+	rreplace("@([A-Z][0-9a-zA-Z\\.]+)", "{{.$1}}")
 	rreplace(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`, "{{ $1 }}")
 	rreplace("%([a-zA-Z_0-9]+)", `{{ T "$1" }}`)
 
