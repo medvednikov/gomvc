@@ -130,6 +130,10 @@ func (c *Controller) SetContentType(ct string) {
 	c.Out.Header().Set("Content-Type", ct)
 }
 
+func (c *Controller) AllowOrigin(val string) {
+	c.Out.Header().Set("Access-Control-Allow-Origin", val)
+}
+
 func (c *Controller) SetHeader(header, value string) {
 	c.Out.Header().Set(header, value)
 }
