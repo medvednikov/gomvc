@@ -56,6 +56,8 @@ var defaultFuncs = template.FuncMap{
 		}
 		return template.HTML("<script src='" + file + "'></script>")
 	},
+	//"flash" func() template.HTML { TODO
+	//},
 }
 
 // readTemplate reads a template file on dev, or an asset file on production

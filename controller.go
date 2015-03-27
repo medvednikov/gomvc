@@ -42,6 +42,8 @@ type Controller struct {
 	// PageTitle defines the title of the HTML page and is set in the action
 	PageTitle string
 
+	FlashMsg string
+
 	stopped bool
 }
 
@@ -146,6 +148,10 @@ func (c *Controller) IsAjax() bool {
 func (c *Controller) RenderError(msg string, code int) {
 	http.Error(c.Out, msg, code)
 	c.stopped = true
+}
+
+func (c *Controller) Flash(s string) {
+	c.SetCookie("gomvc_flash", s)
 }
 
 // Abort stops execution of the current action immediately
@@ -254,6 +260,9 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	for key, _ := range c.Request.PostForm {
 		c.Form[key] = c.Request.PostForm.Get(key)
 	}
+
+	c.FlashMsg = c.GetCookie("gomvc_flash")
+	c.SetCookie("gomvc_flash", "")
 }
 
 func (c *Controller) checkMethodType() bool {
