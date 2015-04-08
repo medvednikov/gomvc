@@ -31,7 +31,7 @@ var defaultFuncs = template.FuncMap{
 			return template.HTML("")
 		}
 		// Use minified JS on production
-		if !Debug {
+		if !isDev {
 			file = file[:pos] + ".min.js"
 		}
 		file += fmt.Sprintf("?%d", TimeStamp)
@@ -63,8 +63,8 @@ var defaultFuncs = template.FuncMap{
 // readTemplate reads a template file on dev, or an asset file on production
 // and returns its contents
 func readTemplate(path string) string {
-	if !Debug && AssetFunc != nil {
-		b, err := AssetFunc(path)
+	if !isDev && assetFunc != nil {
+		b, err := assetFunc(path)
 		if err != nil {
 			log.Println("Asset error", err)
 			return ""

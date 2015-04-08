@@ -12,7 +12,7 @@ import (
 // getActionsFromSourceFiles parses all controller source files and fetches
 // data about action functions
 func getActionsFromSourceFiles() {
-	if !Debug {
+	if !isDev {
 		return
 	}
 

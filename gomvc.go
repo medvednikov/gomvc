@@ -17,7 +17,7 @@ var (
 	// Debug is used to determine how to display error messages. Default is
 	// true, set to false when deploying. One of the easy ways to do that
 	// automatically is to parse machine's hostname.
-	Debug bool = true
+	isDev bool = true
 
 	// Gorilla router. Used for parsing url variables like /member/{id}
 	router *mux.Router = mux.NewRouter()
@@ -31,25 +31,42 @@ var (
 
 	TimeStamp int64
 
+	cookieStore *sessions.CookieStore
+
+	assetFunc  func(string) ([]byte, error)
+	assetNames []string
+
+	sessionId     string
+	sessionSecret string
+)
+
+type Config struct {
+	Port       string
+	IsDev      bool
 	AssetFunc  func(string) ([]byte, error)
 	AssetNames []string
 
 	SessionId     string
 	SessionSecret string
-	cookieStore   *sessions.CookieStore
-)
+}
 
 // Run initializes starts the web server
-func Run(port string, isDebug bool) {
-	Debug = isDebug
-	TimeStamp = time.Now().Unix()
-	fmt.Println("Starting a gomvc app on port ", port, " with debug=", Debug)
-	getActionsFromSourceFiles()
-	http.Handle("/", router)
+func Run(config *Config) {
+	fmt.Println("Starting a gomvc app on port ", config.Port,
+		" with isdev=", config.IsDev)
+	isDev = config.IsDev
+	assetFunc = config.AssetFunc
+	assetNames = config.AssetNames
+	sessionId = config.SessionId
+	sessionSecret = config.SessionSecret
 
-	cookieStore = sessions.NewCookieStore([]byte(SessionSecret))
-	if port != "" {
-		fmt.Println(http.ListenAndServe(port, nil))
+	TimeStamp = time.Now().Unix()
+	getActionsFromSourceFiles()
+	cookieStore = sessions.NewCookieStore([]byte(sessionSecret))
+
+	http.Handle("/", router)
+	if config.Port != "" {
+		fmt.Println(http.ListenAndServe(":"+config.Port, nil))
 	}
 }
 
@@ -60,7 +77,7 @@ func Run(port string, isDebug bool) {
 func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Show a general error message on production
-		if !Debug {
+		if !isDev {
 			defer func() {
 				if r := recover(); r != nil {
 					// TODO Custom error templates

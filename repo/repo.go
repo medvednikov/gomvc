@@ -3,13 +3,11 @@ package repo
 import (
 	"database/sql"
 	"log"
-	"os"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/coopernurse/gorp"
-	"github.com/medvednikov/gomvc"
 )
 
 var (
@@ -162,9 +160,9 @@ func typeName(obj interface{}) string {
 func InitRepo(dbb *sql.DB, tables M) {
 	db = dbb
 	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
-	if gomvc.Debug {
-		Dbmap.TraceOn("", log.New(os.Stdout, "", log.Lmicroseconds))
-	}
+	//if gomvc.isDev {
+	//Dbmap.TraceOn("", log.New(os.Stdout, "", log.Lmicroseconds))
+	//}
 	for tableName, obj := range tables {
 		typ := typeName(obj)
 		typeMap[typ] = tableName

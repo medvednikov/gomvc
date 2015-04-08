@@ -77,7 +77,7 @@ func (c *Controller) Render(data interface{}) {
 	err = t.ExecuteTemplate(c.Out, path, data)
 	if err != nil {
 		log.Println("Template execution error:", err)
-		if Debug {
+		if isDev {
 			c.Write("Template execution error:", err)
 		}
 		return
@@ -276,7 +276,7 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	c.SetCookie("gomvc_flash", "")
 
 	// Session
-	c.gorillaSession, _ = cookieStore.Get(c.Request, SessionId)
+	c.gorillaSession, _ = cookieStore.Get(c.Request, sessionId)
 	c.Session = c.gorillaSession.Values
 }
 
@@ -296,7 +296,7 @@ func (c *Controller) checkMethodType() bool {
 func runMethod(method reflect.Value, c *Controller) {
 	if !method.IsValid() {
 		http.NotFound(c.Out, c.Request)
-		if Debug {
+		if isDev {
 			c.Write("Unknown action '" + c.ActionName +
 				"' (controller: '" + c.ControllerName + "')")
 		}
