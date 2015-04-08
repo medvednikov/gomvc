@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 // Controller is the core type of gomvc
@@ -44,6 +45,9 @@ type Controller struct {
 
 	FlashMsg string
 
+	gorillaSession *sessions.Session
+	Session        map[interface{}]interface{}
+
 	stopped bool
 }
 
@@ -52,6 +56,8 @@ func (c *Controller) Render(data interface{}) {
 	if c.stopped {
 		return
 	}
+	c.cleanUp()
+
 	t := template.New("root").Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
 
 	// Parse layout file with all subtemplates first
@@ -97,6 +103,8 @@ func EmptyHandler(w http.ResponseWriter, r *http.Request) {
 
 // Redirect performs an HTTP redirect to another action in the same controller
 func (c *Controller) Redirect(action string) {
+	c.cleanUp()
+
 	if !strings.HasPrefix(action, "http") {
 		action = "/" + action
 	}
@@ -146,6 +154,7 @@ func (c *Controller) IsAjax() bool {
 }
 
 func (c *Controller) RenderError(msg string, code int) {
+	c.cleanUp()
 	http.Error(c.Out, msg, code)
 	c.stopped = true
 }
@@ -165,6 +174,7 @@ func (c *Controller) RenderJson(model interface{}) {
 	if c.stopped {
 		return
 	}
+	c.cleanUp()
 
 	c.SetContentType("application/json")
 
@@ -181,7 +191,7 @@ func (c *Controller) RenderJsonError(errorMsg string) {
 	if c.stopped {
 		return
 	}
-
+	c.cleanUp()
 	c.SetContentType("application/json")
 
 	j := struct {
@@ -202,6 +212,7 @@ func (c *Controller) RenderJsonError(errorMsg string) {
 }
 
 func (c *Controller) RenderJsonRedirect(redirectUrl string) {
+	c.cleanUp()
 	c.SetContentType("application/json")
 
 	j := struct {
@@ -263,6 +274,10 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 
 	c.FlashMsg = c.GetCookie("gomvc_flash")
 	c.SetCookie("gomvc_flash", "")
+
+	// Session
+	c.gorillaSession, _ = cookieStore.Get(c.Request, SessionId)
+	c.Session = c.gorillaSession.Values
 }
 
 func (c *Controller) checkMethodType() bool {
@@ -350,4 +365,9 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 		return reflect.ValueOf(toint(stringValue))
 	}
 	return reflect.ValueOf(stringValue)
+}
+
+func (c *Controller) cleanUp() {
+	// Save session
+	c.gorillaSession.Save(c.Request, c.Out)
 }

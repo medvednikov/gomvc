@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 var (
@@ -32,6 +33,10 @@ var (
 
 	AssetFunc  func(string) ([]byte, error)
 	AssetNames []string
+
+	SessionId     string
+	SessionSecret string
+	cookieStore   *sessions.CookieStore
 )
 
 // Run initializes starts the web server
@@ -41,6 +46,8 @@ func Run(port string, isDebug bool) {
 	fmt.Println("Starting a gomvc app on port ", port, " with debug=", Debug)
 	getActionsFromSourceFiles()
 	http.Handle("/", router)
+
+	cookieStore = sessions.NewCookieStore([]byte(SessionSecret))
 	if port != "" {
 		fmt.Println(http.ListenAndServe(port, nil))
 	}
@@ -68,7 +75,7 @@ we have been notified about it. Sorry for the inconvenience.`)
 
 		// Set HTTP headers
 		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		//w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		// Fetch the type of the controller (e.g. "Home")
 		typ := reflect.Indirect(reflect.ValueOf(obj)).Type()
