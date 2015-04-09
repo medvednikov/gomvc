@@ -63,6 +63,12 @@ func Run(config *Config) {
 	TimeStamp = time.Now().Unix()
 	getActionsFromSourceFiles()
 	cookieStore = sessions.NewCookieStore([]byte(sessionSecret))
+	cookieStore.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 30, // Default session lasts 30 days
+		HttpOnly: true,       // Do not allow the cookie to be read from JS
+		Secure:   !isDev,     // Use secure store in production only
+	}
 
 	http.Handle("/", router)
 	if config.Port != "" {
@@ -73,7 +79,7 @@ func Run(config *Config) {
 // GetHandler generates a net/http handler func from a controller type.
 // A new controller instance is created to handle incoming requests.
 // Example:
-// http.HandleFunc("/Account/", ez.GetHandler(&AccountController{}))
+// http.HandleFunc("/Account/", gomvc.GetHandler(&AccountController{}))
 func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Show a general error message on production
@@ -100,7 +106,7 @@ we have been notified about it. Sorry for the inconvenience.`)
 		// Create a new controller of this type for this request
 		val := reflect.New(typ)
 
-		// Get base object c (ez.Controller), initialize it and update
+		// Get base object c (gomvc.Controller), initialize it and update
 		// it. It can be several 'parents' away.
 		parentVal := val.Elem().Field(0)
 		for parentVal.Type().Name() != "Controller" {
