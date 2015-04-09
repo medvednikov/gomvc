@@ -179,8 +179,8 @@ func testpgx() {
 }
 
 func main() {
-	testpgx()
-	return
+	//testpgx()
+	//return
 	db, err := sql.Open("postgres", "user=alex password=123 dbname=myorm sslmode=disable")
 	h(err)
 	q := ("SELECT Id, IsActive, address, views  FROM Room limit 10000")
@@ -206,6 +206,7 @@ func main() {
 	//fmt.Printf("RES=%#v\n", rooms[0])
 	fmt.Println("Len=", len(rooms))
 
+	return
 	//for _, room := range rooms {
 	//fmt.Println(room.Id, room.Isactive, room.Address, room.Views)
 	//}
