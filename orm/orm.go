@@ -12,6 +12,9 @@ import (
 
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
+
+	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/stdlib"
 )
 
 type Room struct {
@@ -50,6 +53,10 @@ func scanToStruct(rows *sql.Rows, out interface{}) {
 		}
 	*/
 
+}
+
+type MyRows interface {
+	Scan(dest ...interface{}) error
 }
 
 func scanToStructs(rows *sql.Rows, out interface{}) error {
@@ -129,7 +136,51 @@ func test(i interface{}) {
 	//*i = 2
 }
 
+func testpgx() {
+	//conn, err := pgx.Connect(pgx.ConnConfig{
+	config := pgx.ConnConfig{
+
+		Host:     "localhost",
+		User:     "alex",
+		Password: "123",
+		Database: "myorm",
+	}
+
+	pool, err := pgx.NewConnPool(pgx.ConnPoolConfig{ConnConfig: config})
+	h(err)
+
+	db, err := stdlib.OpenFromConnPool(pool)
+	h(err)
+
+	var id, views int32
+	_ = views
+	_ = id
+	var isactive bool
+	_ = isactive
+	var address string
+	_ = address
+
+	rooms := make([]*Room, 0)
+	rows, err := db.Query("SELECT views, isactive, address FROM Room ")
+	t0 := time.Now()
+	err = scanToStructs(rows, &rooms)
+	fmt.Println("T=", time.Now().Sub(t0))
+	h(err)
+	//rows.Columns()
+	/*
+		for rows.Next() {
+			err = rows.Scan(&views, &isactive, &address)
+			fmt.Println("AD=", views, isactive, address)
+			h(err)
+		}
+		h(err)
+	*/
+	fmt.Println("pgx len=", len(rooms))
+}
+
 func main() {
+	testpgx()
+	return
 	db, err := sql.Open("postgres", "user=alex password=123 dbname=myorm sslmode=disable")
 	h(err)
 	q := ("SELECT Id, IsActive, address, views  FROM Room limit 10000")
@@ -187,7 +238,7 @@ func main() {
 
 func h(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("h err: ", err)
 	}
 }
 
