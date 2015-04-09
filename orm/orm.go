@@ -73,7 +73,7 @@ func scanToStructs(rows *sql.Rows, out interface{}) error {
 
 	// Get list of columns
 	cols, err := rows.Columns()
-	fmt.Println("COLS", cols, t.Name(), t.Elem().Kind())
+	fmt.Println("COLS!", cols, t.Name(), t.Elem().Kind())
 	if err != nil {
 		return fmt.Errorf("orm: Columns() call failed: ", err)
 	}
@@ -138,7 +138,6 @@ func main() {
 	//var isactive bool
 	//var address string
 
-	t0 := time.Now()
 	rows, err := db.Query(q) //.Scan(&id, &address, &isactive, &views)
 	h(err)
 
@@ -148,11 +147,13 @@ func main() {
 	//
 
 	//t := time.Now()
+	t0 := time.Now()
 	err = scanToStructs(rows, &rooms)
 	h(err)
+
 	fmt.Println("TIME=", time.Now().Sub(t0))
-	//fmt.Println("RES=", util.Dump(rooms))
-	return
+	//fmt.Printf("RES=%#v\n", rooms[0])
+	fmt.Println("Len=", len(rooms))
 
 	//for _, room := range rooms {
 	//fmt.Println(room.Id, room.Isactive, room.Address, room.Views)
