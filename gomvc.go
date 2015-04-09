@@ -58,6 +58,9 @@ func Run(config *Config) {
 	assetFunc = config.AssetFunc
 	assetNames = config.AssetNames
 	sessionId = config.SessionId
+	if sessionId == "" {
+		sessionId = "gomvc_session"
+	}
 	sessionSecret = config.SessionSecret
 
 	TimeStamp = time.Now().Unix()
