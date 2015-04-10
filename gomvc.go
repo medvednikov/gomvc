@@ -143,6 +143,8 @@ we have been notified about it. Sorry for the inconvenience.`)
 		if afterAction.IsValid() {
 			afterAction.Call([]reflect.Value{})
 		}
+
+		c.cleanUp()
 	}
 }
 
