@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -31,6 +32,8 @@ type Room struct {
 	Id, Views int
 	Isactive  bool
 	Address   string
+	Cities    []string
+	Postids   []int
 }
 type Rooms []*Room
 
@@ -77,20 +80,28 @@ func initGoPg() {
 }
 
 func main() {
-	//genData()
-
-	//testpgx()
-
+	cmd := os.Args[1]
 	t0 := time.Now()
+	switch cmd {
+	case "pgx":
+		//genData()
+
+		initPgx()
+		testpgx()
+	case "gopg":
+		initGoPg()
+		testGoPg()
+	case "gorp":
+		initPq()
+		testgorp()
+
+	}
+
 	/*
 		initPq()
 		testpq()
 	*/
 
-	//testgorp()
-
-	initGoPg()
-	testGoPg()
 	fmt.Println("TOTAL", time.Now().Sub(t0))
 
 }
@@ -130,7 +141,7 @@ func testgorp() {
 
 func testpgx() {
 	rooms := make([]*Room, 0)
-	rows, err := db.Query("SELECT id, views, isactive, address FROM Room ")
+	rows, err := db.Query("SELECT id, views, isactive, address, cities FROM Room ")
 	//t0 := time.Now()
 	err = scanToStructs(rows, &rooms)
 	//fmt.Println("TIME pgx=", time.Now().Sub(t0))
@@ -149,7 +160,7 @@ func testpgx() {
 
 func testGoPg() {
 	var rooms Rooms
-	_, err := db2.Query(&rooms, "SELECT id, views, isactive, address FROM Room ")
+	_, err := db2.Query(&rooms, "SELECT * FROM Room ")
 	h(err)
 	fmt.Println("go pg len=", len(rooms), q.Dump(rooms[0]))
 }
@@ -229,6 +240,7 @@ func scanToStructs(rows *sql.Rows, out interface{}) error {
 		"views":    1,
 		"isactive": 2,
 		"address":  3,
+		"cities":   4,
 	}
 
 	fmt.Println("SCAN COL=", time.Now().Sub(t0))
