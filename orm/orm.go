@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+	"time"
 
 	"medved/q"
 
@@ -79,8 +80,18 @@ func main() {
 	//genData()
 
 	//testpgx()
-	//testpq()
+
+	t0 := time.Now()
+	/*
+		initPq()
+		testpq()
+	*/
+
 	//testgorp()
+
+	initGoPg()
+	testGoPg()
+	fmt.Println("TOTAL", time.Now().Sub(t0))
 
 }
 
@@ -90,10 +101,11 @@ func testpq() {
 	//var isactive bool
 	//var address string
 
+	t0 := time.Now()
 	rows, err := db.Query(query) //.Scan(&id, &address, &isactive, &views)
 	h(err)
 
-	//fmt.Println("TIME0=", time.Now().Sub(t0))
+	fmt.Println("TIME query=", time.Now().Sub(t0))
 	//room := Room{}
 	rooms := make([]*Room, 0)
 	//
@@ -143,7 +155,9 @@ func testGoPg() {
 }
 
 func scanToStruct(rows *sql.Rows, out interface{}) {
+	t0 := time.Now()
 	cols, err := rows.Columns()
+	fmt.Println("SCAN COL=", time.Now().Sub(t0))
 	h(err)
 
 	rows.Next()
@@ -181,6 +195,7 @@ type MyRows interface {
 func scanToStructs(rows *sql.Rows, out interface{}) error {
 	//t0 := time.Now()
 
+	t0 := time.Now()
 	t := reflect.TypeOf(out) // *[]*User
 	if t.Kind() != reflect.Ptr {
 		return fmt.Errorf("orm: A pointer to slice is expected for Select()")
@@ -216,6 +231,7 @@ func scanToStructs(rows *sql.Rows, out interface{}) error {
 		"address":  3,
 	}
 
+	fmt.Println("SCAN COL=", time.Now().Sub(t0))
 	// Loop thru all rows and convert them to Go objects
 	for rows.Next() {
 		res := reflect.New(t.Elem()) // *User
@@ -244,6 +260,7 @@ func scanToStructs(rows *sql.Rows, out interface{}) error {
 		// Append res to the end result
 		slice.Set(reflect.Append(slice, res))
 	}
+	fmt.Println("SCAN COL END=", time.Now().Sub(t0))
 
 	return nil
 }
