@@ -14,6 +14,7 @@ import (
 
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
+	"github.com/medvednikov/repo-pg"
 	"gopkg.in/pg.v2"
 
 	"github.com/jackc/pgx"
@@ -34,6 +35,8 @@ type Room struct {
 	Address   string
 	Cities    []string
 	Postids   []int
+
+	C int
 }
 type Rooms []*Room
 
@@ -80,12 +83,13 @@ func initGoPg() {
 }
 
 func main() {
+	repoo.Insert()
 	cmd := os.Args[1]
 	t0 := time.Now()
 	switch cmd {
+	case "gen":
+		genData()
 	case "pgx":
-		//genData()
-
 		initPgx()
 		testpgx()
 	case "gopg":
@@ -160,9 +164,20 @@ func testpgx() {
 
 func testGoPg() {
 	var rooms Rooms
-	_, err := db2.Query(&rooms, "SELECT * FROM Room ")
+	_, err := db2.Query(&rooms, "SELECT address, 2 as c FROM Room ")
 	h(err)
-	fmt.Println("go pg len=", len(rooms), q.Dump(rooms[0]))
+	fmt.Println("go pg len=", len(rooms), q.Dump(rooms[1]))
+
+	var room Room
+	_, err = db2.QueryOne(&room, "SELECT * FROM Room where id =1 ")
+	h(err)
+	fmt.Println("!!!! OBJ=", q.Dump(room))
+	room.Views++
+	_, err = db2.ExecOne("UPDATE Room SET views=views+1 WHERE id= ?id", room)
+}
+
+func (r *Room) Update(r2 *Room) {
+
 }
 
 func scanToStruct(rows *sql.Rows, out interface{}) {
@@ -281,13 +296,17 @@ func test(i interface{}) {
 	//*i = 2
 }
 func genData() {
+
+	initPq()
+	fmt.Println("YES")
 	for i := 1; i <= 10000; i++ {
 		r := &Room{
 			Isactive: true,
 			Address:  RandomString(20),
 			Views:    rand.Intn(500) + 1,
 		}
-		dbmap.Insert(r)
+		err := dbmap.Insert(r)
+		h(err)
 	}
 }
 
