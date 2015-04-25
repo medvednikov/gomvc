@@ -62,7 +62,6 @@ func Run(config *Config) {
 		sessionId = "gomvc_session"
 	}
 	sessionSecret = config.SessionSecret
-
 	TimeStamp = time.Now().Unix()
 	getActionsFromSourceFiles()
 	cookieStore = sessions.NewCookieStore([]byte(sessionSecret))
@@ -72,7 +71,6 @@ func Run(config *Config) {
 		HttpOnly: true,       // Do not allow the cookie to be read from JS
 		Secure:   !isDev,     // Use secure store in production only
 	}
-
 	http.Handle("/", router)
 	if config.Port != "" {
 		fmt.Println(http.ListenAndServe(":"+config.Port, nil))
@@ -98,17 +96,12 @@ we have been notified about it. Sorry for the inconvenience.`)
 				}
 			}()
 		}
-
 		// Set HTTP headers
 		w.Header().Set("Content-Type", "text/html")
-		//w.Header().Set("Access-Control-Allow-Origin", "*")
-
 		// Fetch the type of the controller (e.g. "Home")
 		typ := reflect.Indirect(reflect.ValueOf(obj)).Type()
-
 		// Create a new controller of this type for this request
 		val := reflect.New(typ)
-
 		// Get base object c (gomvc.Controller), initialize it and update
 		// it. It can be several 'parents' away.
 		parentVal := val.Elem().Field(0)
@@ -116,34 +109,28 @@ we have been notified about it. Sorry for the inconvenience.`)
 			parentVal = parentVal.Field(0) // TODO error if nothing was found
 		}
 		c := parentVal.Interface().(Controller)
-
 		c.ControllerName = typ.Name()
 		c.InitValues(w, r)
 		// Since c is copy, not a pointer, need to manually update the
 		// parent controller object TODO
 		parentVal.Set(reflect.ValueOf(c))
-
 		// Run the 'before action' action if it exists
 		beforeAction := val.MethodByName("BeforeAction_")
 		if beforeAction.IsValid() {
 			beforeAction.Call([]reflect.Value{})
 		}
-
 		// c contained a copy of the parent controller, so we need to
 		// re-fetch it in case it was updated in BeforeAction.
 		// TODO this is ugly, maybe possible to make it a pointer
 		c = parentVal.Interface().(Controller)
-
 		// Run the actual method
 		method := val.MethodByName(c.ActionName)
 		runMethod(method, &c)
-
 		// Run the 'after run' action if it exists
 		afterAction := val.MethodByName("AfterAction_")
 		if afterAction.IsValid() {
 			afterAction.Call([]reflect.Value{})
 		}
-
 		c.cleanUp()
 	}
 }

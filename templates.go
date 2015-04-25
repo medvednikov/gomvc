@@ -71,13 +71,11 @@ func readTemplate(path string) string {
 		}
 		return convertTemplate(b)
 	}
-
 	b, err := ioutil.ReadFile("v/" + path)
 	if err != nil {
 		log.Println("Reading template error", err)
 		return ""
 	}
-
 	return convertTemplate(b)
 }
 
@@ -85,12 +83,11 @@ func readTemplate(path string) string {
 // custom template to Go's HTML template
 func convertTemplate(b []byte) string {
 	s := string(b)
-
+	// A helper s//g function
 	rreplace := func(r, replaceWith string) {
 		reg := regexp.MustCompile(r)
 		s = reg.ReplaceAllString(s, replaceWith)
 	}
-
 	rreplace(`@\*(.*?)\*@`, "")
 	rreplace(`@t ([a-zA-Z_0-9]+)`, `{{template "$1"}}`)
 	rreplace(`@\.`, "{{.}}")
@@ -98,6 +95,5 @@ func convertTemplate(b []byte) string {
 	rreplace("@([A-Z][0-9a-zA-Z\\.]+)", "{{.$1}}")
 	rreplace(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`, "{{ $1 }}")
 	rreplace("%([a-zA-Z_0-9]+)", `{{ T "$1" }}`)
-
 	return s
 }

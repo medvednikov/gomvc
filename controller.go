@@ -214,7 +214,7 @@ func (c *Controller) Index() {
     `)
 }
 
-// initValues parses the http.Request object and fetches all necessary values
+// InitValues parses the http.Request object and fetches all necessary values
 // for gomvc.Controller
 func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	c.Out = w
@@ -226,28 +226,24 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 		c.ActionName += "_" + r.Method
 	}
 	c.PageTitle = ""
-
 	// Generate query string map (Params)
 	c.Params = make(map[string]string)
 	for key, _ := range values {
 		c.Params[key] = values.Get(key)
 	}
-
 	// Assign routing variables to Params
 	for key, value := range mux.Vars(r) {
 		c.Params[key] = value
 	}
-
 	// Generate form data
 	c.Form = make(map[string]string)
 	c.Request.ParseForm()
 	for key, _ := range c.Request.PostForm {
 		c.Form[key] = c.Request.PostForm.Get(key)
 	}
-
+	// Flash TODO move to session
 	c.FlashMsg = c.GetCookie("gomvc_flash")
 	c.SetCookie("gomvc_flash", "")
-
 	// Session
 	c.gorillaSession, _ = cookieStore.Get(c.Request, sessionId)
 	c.Session = c.gorillaSession.Values
@@ -275,30 +271,24 @@ func runMethod(method reflect.Value, c *Controller) {
 		}
 		return
 	}
-
 	if !c.checkMethodType() {
 		return
 	}
-
 	if c.stopped {
 		return
 	}
-
 	// Run it via reflect
 	values := make([]reflect.Value, 0)
-
 	// Loop thru all method args and assign query string parameters to them
 	for i, argName := range ActionArgs[c.ControllerName][c.ActionName] {
 		// Get value from the query string (params)
 		// Register(name, password string) => /Register?name=a;password=b
 		stringValue := c.Params[argName]
-
 		// Convert this argument to a value of a certain type (Form,
 		// string, int)
 		argType := method.Type().In(i)
 		values = append(values, c.argToValue(stringValue, argType))
 	}
-
 	// TODO handle empty values
 	//fmt.Println(c.ControllerName, c.ActionName, values, dump(ActionArgs))
 	method.Call(values)
@@ -311,16 +301,13 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 	if argType.Kind() == reflect.Ptr && argType.Elem().Kind() == reflect.Struct {
 		// Dereference the form
 		argType = argType.Elem()
-
 		// Create a new form object
 		newFormObj := reflect.New(argType)
-
 		// Set all its fields
 		for i := 0; i < argType.NumField(); i++ {
 			field := newFormObj.Elem().Field(i)
 			fieldName := argType.Field(i).Name // e.g. "Id", "Title"
 			formValue := c.Form[decapitalize(fieldName)]
-
 			switch field.Type().Name() {
 			case "int":
 				field.SetInt(int64(toint(formValue)))
@@ -330,7 +317,6 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 				field.SetString(formValue)
 			}
 		}
-
 		return newFormObj
 	} else if argType.Name() == "int" {
 		// Convert to int if this argument is an int, otherwise leave

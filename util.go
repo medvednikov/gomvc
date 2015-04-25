@@ -52,13 +52,12 @@ func replaceDashes(action string) string {
 	if strings.Index(action, "-") == -1 {
 		return action
 	}
-
 	var res bytes.Buffer
 	for i := 0; i < len(action); i++ {
 		if action[i] == '-' {
 			if i < len(action)-1 {
-				res.WriteString(strings.ToUpper(
-					string(action[i+1])))
+				res.WriteString(
+					strings.ToUpper(string(action[i+1])))
 				i++
 			}
 		} else {
@@ -79,10 +78,8 @@ func getActionFromUri(uri, controller string) string {
 	if uri == "" {
 		return "Index"
 	}
-
 	values := strings.Split(strings.Trim(uri, "/"), "/")
 	actionName := values[0]
-
 	// http://example.com/Controller/Action
 	if len(values) > 1 { // TODO this is ugly
 		if controller == "Home" {
@@ -95,12 +92,10 @@ func getActionFromUri(uri, controller string) string {
 		// /Action => /Action/Index
 		actionName = "Index"
 	}
-
 	// Capitalize and remove unallowed characters
 	actionName = capitalize(actionName)
 	actionName = strings.Replace(actionName, ".", "", -1)
 	actionName = replaceDashes(actionName)
-
 	return actionName
 }
 
