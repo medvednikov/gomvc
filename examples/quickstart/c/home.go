@@ -1,14 +1,14 @@
 package controllers
 
-import ez "github.com/medvednikov/ezweb"
+import "github.com/medvednikov/gomvc"
 
 type Home struct {
-	ez.Controller
+	gomvc.Controller
 }
 
 func (c *Home) Index(name string) {
 	if name == "" {
-		name = "sstranger"
+		name = "stranger"
 	}
 	c.Write("Hello, ", name, "! :)")
 }

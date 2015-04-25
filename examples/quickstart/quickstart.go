@@ -1,11 +1,14 @@
 package main
 
 import (
-	. "./controllers"
-	ez "github.com/medvednikov/ezweb"
+	. "./c"
+	"github.com/medvednikov/gomvc"
 )
 
 func main() {
-	ez.Route("/", &Home{})
-	ez.Run(":8088", true)
+	gomvc.Route("/", &Home{})
+	gomvc.Run(&gomvc.Config{
+		Port:  "8088",
+		IsDev: true,
+	})
 }
