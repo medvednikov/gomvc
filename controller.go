@@ -57,22 +57,18 @@ func (c *Controller) Render(data interface{}) {
 		return
 	}
 	c.cleanUp()
-
 	t := template.New("root").Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
-
 	// Parse layout file with all subtemplates first
 	_, err := t.New("layout.html").Parse(readTemplate("layout.html"))
 	if err != nil {
 		log.Fatal("Layout template parsing error", err)
 	}
-
 	// Now parse the actual template file corresponding to the action
 	path := c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
 	_, err = t.New(path).Parse(readTemplate(path))
 	if err != nil {
 		log.Fatal("Template parsing error", err)
 	}
-
 	// Finally, execute it
 	err = t.ExecuteTemplate(c.Out, path, data)
 	if err != nil {
@@ -104,11 +100,9 @@ func EmptyHandler(w http.ResponseWriter, r *http.Request) {
 // Redirect performs an HTTP redirect to another action in the same controller
 func (c *Controller) Redirect(action string) {
 	c.cleanUp()
-
 	if !strings.HasPrefix(action, "http") {
 		action = "/" + action
 	}
-
 	http.Redirect(c.Out, c.Request, action, 302)
 }
 
@@ -175,15 +169,12 @@ func (c *Controller) RenderJson(model interface{}) {
 		return
 	}
 	c.cleanUp()
-
 	c.SetContentType("application/json")
-
 	obj, err := json.Marshal(model)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
 	c.Write(string(obj))
 }
 
@@ -193,37 +184,19 @@ func (c *Controller) RenderJsonError(errorMsg string) {
 	}
 	c.cleanUp()
 	c.SetContentType("application/json")
-
-	j := struct {
-		ErrorMsg string
-		Status   string
-	}{
-		ErrorMsg: errorMsg,
-		Status:   "FAIL",
-	}
-
-	obj, err := json.Marshal(j) // TODO
+	c.Out.WriteHeader(http.StatusBadRequest) // 400
+	json, err := json.Marshal(struct{ ErrorMsg string }{errorMsg})
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	c.Write(string(obj))
+	c.Write(string(json))
 }
 
 func (c *Controller) RenderJsonRedirect(redirectUrl string) {
 	c.cleanUp()
 	c.SetContentType("application/json")
-
-	j := struct {
-		RedirectUrl string
-		Status      string
-	}{
-		Status:      "OK",
-		RedirectUrl: redirectUrl,
-	}
-
-	obj, _ := json.Marshal(j)
+	obj, _ := json.Marshal(struct{ RedirectUrl string }{redirectUrl})
 	c.Write(string(obj))
 }
 
