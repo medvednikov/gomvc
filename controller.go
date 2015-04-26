@@ -164,7 +164,7 @@ func (c *Controller) Abort() {
 
 // ReturnJson returns a marshaled json object with content type 'application/json'.
 // This is usually used for responding to AJAX requests.
-func (c *Controller) RenderJson(model interface{}) {
+func (c *Controller) RenderJson(model interface{}) { // TODO make private
 	if c.stopped {
 		return
 	}
@@ -291,7 +291,16 @@ func runMethod(method reflect.Value, c *Controller) {
 	}
 	// TODO handle empty values
 	//fmt.Println(c.ControllerName, c.ActionName, values, dump(ActionArgs))
-	method.Call(values)
+	results := method.Call(values)
+	if len(results) > 0 {
+		res := results[0].Interface()
+		switch res.(type) {
+		case JSON:
+			c.RenderJson(res.(JSON).Model)
+		case View:
+			c.Render(res.(View).Model)
+		}
+	}
 }
 
 // argToValue generates a reflect.Value from an argument type and its
