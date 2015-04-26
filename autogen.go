@@ -53,7 +53,8 @@ func getActionsFromSourceFile(sourceFile string) {
 	}
 	controllerName := capitalize(sourceFile[:pos])
 	ActionArgs[controllerName] = make(map[string][]string, 0)
-	r := regexp.MustCompile(`func \([a-zA-Z]+ \*` + controllerName + `\) (.*?)\((.*?)*\) {`)
+	r := regexp.MustCompile(
+		`func \([a-zA-Z]+ \*` + controllerName + `\) (.*?)\((.*?)*\) (.*?){`)
 	matches := r.FindAllStringSubmatch(source, -1)
 	for _, match := range matches {
 		functionName := match[1]

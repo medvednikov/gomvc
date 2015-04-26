@@ -178,7 +178,7 @@ func (c *Controller) RenderJson(model interface{}) { // TODO make private
 	c.Write(string(obj))
 }
 
-func (c *Controller) RenderJsonError(errorMsg string) {
+func (c *Controller) RenderJsonError(errorMsg string) { // TODO remove
 	if c.stopped {
 		return
 	}
@@ -193,7 +193,7 @@ func (c *Controller) RenderJsonError(errorMsg string) {
 	c.Write(string(json))
 }
 
-func (c *Controller) RenderJsonRedirect(redirectUrl string) {
+func (c *Controller) RenderJsonRedirect(redirectUrl string) { // TODO remove
 	c.cleanUp()
 	c.SetContentType("application/json")
 	obj, _ := json.Marshal(struct{ RedirectUrl string }{redirectUrl})
