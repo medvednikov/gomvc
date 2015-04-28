@@ -183,6 +183,7 @@ func (c *Controller) RenderJsonError(errorMsg string) { // TODO remove
 		return
 	}
 	c.cleanUp()
+
 	c.SetContentType("application/json")
 	c.Out.WriteHeader(http.StatusBadRequest) // 400
 	json, err := json.Marshal(struct{ ErrorMsg string }{errorMsg})

@@ -14,6 +14,7 @@ func (c *Controller) JSON(model interface{}) JSON { return JSON{model} }
 func (c *Controller) View(model interface{}) View { return View{model} }
 
 func (c *Controller) JSONError(errorMsg string) JSON {
+	c.SetContentType("application/json")
 	c.Out.WriteHeader(http.StatusBadRequest) // 400
 	return JSON{struct{ ErrorMsg string }{errorMsg}}
 }
