@@ -162,6 +162,11 @@ func (c *Controller) Abort() {
 	c.stopped = true
 }
 
+// IP returns client's IP address
+func (c *Controller) IP() string {
+	return c.Request.Header.Get("X-Forwarded-For")
+}
+
 // ReturnJson returns a marshaled json object with content type 'application/json'.
 // This is usually used for responding to AJAX requests.
 func (c *Controller) RenderJson(model interface{}) { // TODO make private
