@@ -170,7 +170,7 @@ func (c *Controller) RenderJson(model interface{}) { // TODO make private
 	}
 	c.cleanUp()
 	c.SetContentType("application/json")
-	obj, err := json.Marshal(model)
+	obj, err := json.MarshalIndent(model, "", "\t")
 	if err != nil {
 		log.Println(err)
 		return
