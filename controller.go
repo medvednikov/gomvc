@@ -63,6 +63,12 @@ func (c *Controller) Render(data interface{}) {
 	if err != nil {
 		log.Fatal("Layout template parsing error", err)
 	}
+	// Parse the local layout template
+	localLayout := c.ControllerName + "/_layout.html"
+	_, err = t.New(localLayout).Parse(readTemplate(localLayout))
+	if err != nil {
+		log.Fatal("Local layout template parsing error", err)
+	}
 	// Now parse the actual template file corresponding to the action
 	path := c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
 	_, err = t.New(path).Parse(readTemplate(path))
