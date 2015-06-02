@@ -96,36 +96,33 @@ we have been notified about it. Sorry for the inconvenience.`)
 				}
 			}()
 		}
-		// Set HTTP headers
-		w.Header().Set("Content-Type", "text/html")
 		// Fetch the type of the controller (e.g. "Home")
 		typ := reflect.Indirect(reflect.ValueOf(obj)).Type()
 		// Create a new controller of this type for this request
 		val := reflect.New(typ)
-		// Get base object c (gomvc.Controller), initialize it and update
-		// it. It can be several 'parents' away.
-		parentVal := val.Elem().Field(0)
-		for parentVal.Type().Name() != "Controller" {
-			parentVal = parentVal.Field(0) // TODO error if nothing was found
+		// Create the *gomvc.Controller base
+		base := reflect.New(reflect.TypeOf(Controller{}))
+		// For assigning base to
+		parentval := val.Elem().Field(0)
+		// It can be one parent away
+		if parentval.Type().String() != "*gomvc.Controller" {
+			parentval = parentval.Field(0)
 		}
-		c := parentVal.Interface().(Controller)
+		// Now initialize the base
+		c := base.Interface().(*Controller)
 		c.ControllerName = typ.Name()
 		c.InitValues(w, r)
-		// Since c is copy, not a pointer, need to manually update the
-		// parent controller object TODO
-		parentVal.Set(reflect.ValueOf(c))
+		// Assign the *gomvc.Controller base
+		parentval.Set(base)
 		// Run the 'before action' action if it exists
 		beforeAction := val.MethodByName("BeforeAction_")
 		if beforeAction.IsValid() {
 			beforeAction.Call([]reflect.Value{})
 		}
-		// c contained a copy of the parent controller, so we need to
-		// re-fetch it in case it was updated in BeforeAction.
-		// TODO this is ugly, maybe possible to make it a pointer
-		c = parentVal.Interface().(Controller)
 		// Run the actual method
 		method := val.MethodByName(c.ActionName)
-		runMethod(method, &c)
+		//parentval.Set(base)
+		runMethod(method, c)
 		// Run the 'after run' action if it exists
 		afterAction := val.MethodByName("AfterAction_")
 		if afterAction.IsValid() {

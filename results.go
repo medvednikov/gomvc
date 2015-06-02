@@ -11,7 +11,11 @@ type View struct {
 }
 
 func (c *Controller) JSON(model interface{}) JSON { return JSON{model} }
-func (c *Controller) View(model interface{}) View { return View{model} }
+
+func (c *Controller) View(model interface{}) View {
+	c.SetContentType("text/html")
+	return View{model}
+}
 
 func (c *Controller) JSONError(errorMsg string) JSON {
 	c.SetContentType("application/json")

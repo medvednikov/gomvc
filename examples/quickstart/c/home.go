@@ -3,7 +3,7 @@ package controllers
 import "github.com/medvednikov/gomvc"
 
 type Home struct {
-	gomvc.Controller
+	*gomvc.Controller
 }
 
 func (c *Home) Index(name string) {
