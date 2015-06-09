@@ -103,15 +103,6 @@ func EmptyHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// Redirect performs an HTTP redirect to another action in the same controller
-func (c *Controller) Redirect(action string) {
-	c.cleanUp()
-	if !strings.HasPrefix(action, "http") {
-		action = "/" + action
-	}
-	http.Redirect(c.Out, c.Request, action, 302)
-}
-
 // GetCookie returns a value of the cookie with a specified key.
 // If no such cookie was found, an empty string is returned.
 func (c *Controller) GetCookie(key string) string {

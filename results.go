@@ -1,6 +1,9 @@
 package gomvc
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 type JSON struct {
 	Model interface{}
@@ -15,6 +18,16 @@ func (c *Controller) JSON(model interface{}) JSON { return JSON{model} }
 func (c *Controller) View(model interface{}) View {
 	c.SetContentType("text/html")
 	return View{model}
+}
+
+// Redirect performs an HTTP redirect to another action in the same controller
+func (c *Controller) Redirect(action string) View {
+	c.cleanUp()
+	if !strings.HasPrefix(action, "http") {
+		action = "/" + action
+	}
+	http.Redirect(c.Out, c.Request, action, 302)
+	return View{}
 }
 
 func (c *Controller) JSONError(errorMsg string) JSON {
