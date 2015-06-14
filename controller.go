@@ -225,8 +225,9 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	values := r.URL.Query()
 	c.Uri = r.URL.Path[1:]
 	c.ActionName = getActionFromUri(c.Uri, c.ControllerName)
+	// ActionPOST, ActionDELETE etc
 	if r.Method != "GET" {
-		c.ActionName += "_" + r.Method
+		c.ActionName += r.Method
 	}
 	c.PageTitle = ""
 	// Generate query string map (Params)

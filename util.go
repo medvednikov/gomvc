@@ -39,7 +39,11 @@ func decapitalize(s string) string {
 }
 
 func stripMethodType(action string) string {
-	return strings.Replace(action, "_POST", "", -1)
+	pos := strings.LastIndex(action, "POST")
+	if pos == -1 {
+		return action
+	}
+	return action[:pos]
 }
 
 func staticPrefix(prefix, dir string) http.Handler {
