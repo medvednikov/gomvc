@@ -1,11 +1,11 @@
-# gomvc - a tiny MVC web framework for Go #
+# gomvc - a tiny MVC web framework #
 
-This is a simple MVC-ish web framework for Go, which is basically a small
+This is a simple MVC-ish web framework, which is basically a small
 wrapper around Go's net/http.
 
 ## Key features ##
 
-The key features of gomvc are ease of use, lack of clutter, and a very simple
+Ease of use, lack of clutter, and a very simple
 way to quickly define actions and parameters without extra routing and
 configuration files: a function declaration is enough.
 
@@ -13,9 +13,9 @@ Compare using net/http, beego, and gomvc to implement a simple user search page:
 
 ```go
 // gomvc
-func (c *Home) UserSearch(name string, age int) {
+func (c *Home) UserSearch(name string, age int) gomvc.View {
 	user := findByNameAndAge(name, age)
-	c.Render(user)
+	return c.View(user)
 }
 
 func main() {
@@ -29,15 +29,13 @@ func main() {
 func userSearch(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	age, _ := strconv.Atoi(r.URL.Query().Get("age"))
-
 	user := findByNameAndAge(name, age)
-
 	t, _ := template.ParseFiles("usersearch.html")
 	t.Execute(w, user)
 }
 
 func main() {
-	http.HandleFunc("/UserSearch", userSearch)
+	http.HandleFunc("/user-search", userSearch)
 	http.ListenAndServe(":8088", nil)
 }
 ```
@@ -52,7 +50,7 @@ func (this *MainController) Get() {
 }
 
 func main() {
-	beego.Router("/UserSearch", &MainController{})
+	beego.Router("/user-search", &MainController{})
 	beego.Run()
 }
 ```
