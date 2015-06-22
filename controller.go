@@ -233,17 +233,17 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	// Generate query string map (Params)
 	c.Params = make(map[string]string)
 	for key, _ := range values {
-		c.Params[key] = values.Get(key)
+		c.Params[strings.ToLower(key)] = values.Get(key)
 	}
 	// Assign routing variables to Params
 	for key, value := range mux.Vars(r) {
-		c.Params[key] = value
+		c.Params[strings.ToLower(key)] = value
 	}
 	// Generate form data
 	c.Form = make(map[string]string)
 	c.Request.ParseForm()
 	for key, _ := range c.Request.PostForm {
-		c.Form[key] = c.Request.PostForm.Get(key)
+		c.Form[strings.ToLower(key)] = c.Request.PostForm.Get(key)
 	}
 	// Flash TODO move to session
 	c.FlashMsg = c.GetCookie("gomvc_flash")
@@ -287,7 +287,7 @@ func runMethod(method reflect.Value, c *Controller) {
 	for i, argName := range ActionArgs[c.ControllerName][c.ActionName] {
 		// Get value from the query string (params)
 		// Register(name, password string) => /Register?name=a;password=b
-		stringValue := c.Params[argName]
+		stringValue := c.Params[strings.ToLower(argName)]
 		// Convert this argument to a value of a certain type (Form,
 		// string, int)
 		argType := method.Type().In(i)
@@ -320,7 +320,7 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 		for i := 0; i < argType.NumField(); i++ {
 			field := newFormObj.Elem().Field(i)
 			fieldName := argType.Field(i).Name // e.g. "Id", "Title"
-			formValue := c.Form[decapitalize(fieldName)]
+			formValue := c.Form[strings.ToLower(fieldName)]
 			switch field.Type().Name() {
 			case "int":
 				field.SetInt(int64(toint(formValue)))
