@@ -302,7 +302,11 @@ func runMethod(method reflect.Value, c *Controller) {
 		case JSON:
 			c.RenderJson(res.(JSON).Model)
 		case View:
-			c.Render(res.(View).Model)
+			switch res.(View).Model.(type) {
+			case RedirectResult:
+			default:
+				c.Render(res.(View).Model)
+			}
 		}
 	}
 }

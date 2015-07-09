@@ -13,6 +13,8 @@ type View struct {
 	Model interface{}
 }
 
+type RedirectResult struct{}
+
 func (c *Controller) JSON(model interface{}) JSON { return JSON{model} }
 
 func (c *Controller) View(model interface{}) View {
@@ -27,7 +29,7 @@ func (c *Controller) Redirect(action string) View {
 		action = "/" + action
 	}
 	http.Redirect(c.Out, c.Request, action, 302)
-	return View{}
+	return View{RedirectResult{}}
 }
 
 func (c *Controller) JSONError(errorMsg string) JSON {
