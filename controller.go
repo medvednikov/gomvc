@@ -151,6 +151,7 @@ func (c *Controller) RenderError(msg string, code int) {
 }
 
 func (c *Controller) Flash(s string) {
+	c.FlashMsg = s
 	c.SetCookie("gomvc_flash", s)
 }
 
