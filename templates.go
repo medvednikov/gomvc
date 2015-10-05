@@ -88,12 +88,21 @@ func convertTemplate(b []byte) string {
 		reg := regexp.MustCompile(r)
 		s = reg.ReplaceAllString(s, replaceWith)
 	}
+	// Comments
 	rreplace(`@\*(.*?)\*@`, "")
+	// Template call
 	rreplace(`@t ([a-zA-Z_0-9]+)`, `{{template "$1"}}`)
+	// @.
 	rreplace(`@\.`, "{{.}}")
+	// @if @else etc
 	rreplace("@(if|else|end|range|template|define)(.*?)\n", "{{ $1 $2 }}\n")
-	rreplace("@([A-Z][0-9a-zA-Z\\.]+)", "{{.$1}}")
-	rreplace(`@([a-z][a-zA-Z\\.]+( "[^"]+")*)`, "{{ $1 }}")
+	// @Field
+	rreplace(`@([A-Z][0-9a-zA-Z\.]+)`, "{{.$1}}")
+	// @$variable
+	rreplace(`@([\$][0-9a-zA-Z\.]+)`, "{{$1}}")
+	// @func arg1 arg2
+	rreplace(`@([a-z][a-zA-Z\.]+( "[^"]+")*)`, "{{ $1 }}")
+	// %translation_key
 	rreplace("%([a-zA-Z_0-9]+)", `{{ T "$1" }}`)
 	return s
 }
