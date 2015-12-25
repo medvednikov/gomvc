@@ -59,50 +59,23 @@ func main() {
 
     # Install the package:
     go get github.com/medvednikov/gomvc
+    
+    # Install the command-line tool
+    go install github.com/medvednikov/gomvc/cmd/gomvc
 	    
     // Use in your code:
     import "github.com/medvednikov/gomvc"
 
 ## Quick start ##
-You can run the quick start example with
 
 ```
-cd $GOPATH/src/github.com/medvednikov/gomvc/examples/quickstart &&
-go run quickstart.go
+gomvc new mywebapp
+cd mywebapp
+go run cmd/main.go
 ```
 
-Now visit [http://localhost:8088](http://localhost:8088)
+Now visit [http://localhost:8080](http://localhost:8080)
 
-```go
-// c/home.go
-package c
-
-import "github.com/medvednikov/gomvc"
-
-type Home struct {
-	gomvc.Controller
-}
-
-func (c *Home) Index(name string) {
-	if name == "" {
-		name = "stranger"
-	}
-	c.Write("Hello, ", name, "! :)")
-}
-
-// main.go
-package main
-
-import (
-	"github.com/medvednikov/gomvc"
-	. "./c"
-)
-
-func main() {
-	gomvc.Route("/", &Home{})
-	gomvc.Run(":8088", true)
-}
-```
 
 
 ## API Documentation ##
