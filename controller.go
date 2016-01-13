@@ -61,19 +61,31 @@ func (c *Controller) Render(data interface{}) {
 	// Parse layout file with all subtemplates first
 	_, err := t.New("layout.html").Parse(readTemplate("layout.html"))
 	if err != nil {
-		log.Fatal("Layout template parsing error", err)
+		log.Println("Layout template parsing error", err)
+		if isDev {
+			c.Write("Layout template parsing error", err)
+		}
+		return
 	}
 	// Parse the local layout template
 	localLayout := c.ControllerName + "/_layout.html"
 	_, err = t.New(localLayout).Parse(readTemplate(localLayout))
 	if err != nil {
-		log.Fatal("Local layout template parsing error", err)
+		log.Println("Local layout template parsing error", err)
+		if isDev {
+			c.Write("Local layout template parsing error", err)
+		}
+		return
 	}
 	// Now parse the actual template file corresponding to the action
 	path := c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
 	_, err = t.New(path).Parse(readTemplate(path))
 	if err != nil {
-		log.Fatal("Template parsing error", err)
+		log.Println("Template parsing error", err)
+		if isDev {
+			c.Write("Template parsing error", err)
+		}
+		return
 	}
 	// Finally, execute it
 	err = t.ExecuteTemplate(c.Out, path, data)
