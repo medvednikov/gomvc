@@ -179,7 +179,7 @@ func (c *Controller) IP() string {
 
 // ReturnJson returns a marshaled json object with content type 'application/json'.
 // This is usually used for responding to AJAX requests.
-func (c *Controller) RenderJson(model interface{}) { // TODO make private
+func (c *Controller) renderJson(model interface{}) { // TODO make private
 	if c.stopped {
 		return
 	}
@@ -190,29 +190,6 @@ func (c *Controller) RenderJson(model interface{}) { // TODO make private
 		log.Println(err)
 		return
 	}
-	c.Write(string(obj))
-}
-
-func (c *Controller) RenderJsonError(errorMsg string) { // TODO remove
-	if c.stopped {
-		return
-	}
-	c.cleanUp()
-
-	c.SetContentType("application/json")
-	c.Out.WriteHeader(http.StatusBadRequest) // 400
-	json, err := json.Marshal(struct{ ErrorMsg string }{errorMsg})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	c.Write(string(json))
-}
-
-func (c *Controller) RenderJsonRedirect(redirectUrl string) { // TODO remove
-	c.cleanUp()
-	c.SetContentType("application/json")
-	obj, _ := json.Marshal(struct{ RedirectUrl string }{redirectUrl})
 	c.Write(string(obj))
 }
 
@@ -313,7 +290,7 @@ func runMethod(method reflect.Value, c *Controller) {
 		res := results[0].Interface()
 		switch res.(type) {
 		case JSON:
-			c.RenderJson(res.(JSON).Model)
+			c.renderJson(res.(JSON).Model)
 		case View:
 			switch res.(View).Model.(type) {
 			case RedirectResult:
