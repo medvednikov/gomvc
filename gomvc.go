@@ -33,8 +33,7 @@ var (
 
 	cookieStore *sessions.CookieStore
 
-	assetFunc  func(string) ([]byte, error)
-	assetNames []string
+	assetFunc func(string) ([]byte, error)
 
 	sessionId     string
 	sessionSecret string
@@ -56,7 +55,6 @@ func Run(config *Config) {
 		" with isdev=", config.IsDev)
 	isDev = config.IsDev
 	assetFunc = config.AssetFunc
-	assetNames = config.AssetNames
 	sessionId = config.SessionId
 	if sessionId == "" {
 		sessionId = "gomvc_session"
