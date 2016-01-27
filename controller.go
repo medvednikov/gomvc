@@ -298,6 +298,8 @@ func runMethod(method reflect.Value, c *Controller) {
 			default:
 				c.Render(res.(View).Model)
 			}
+		case string:
+			c.Write(res.(string))
 		}
 	}
 }
