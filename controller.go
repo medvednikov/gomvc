@@ -46,7 +46,7 @@ type Controller struct {
 	FlashMsg string
 
 	gorillaSession *sessions.Session
-	Session        map[interface{}]interface{}
+	Session        map[string]string
 
 	stopped bool
 }
@@ -164,7 +164,7 @@ func (c *Controller) RenderError(msg string, code int) {
 
 func (c *Controller) Flash(s string) {
 	c.FlashMsg = s
-	c.SetCookie("gomvc_flash", s)
+	c.Session["gomvc_flash"] = s
 }
 
 // Abort stops execution of the current action immediately
@@ -177,9 +177,9 @@ func (c *Controller) IP() string {
 	return c.Request.Header.Get("X-Forwarded-For")
 }
 
-// ReturnJson returns a marshaled json object with content type 'application/json'.
+// renderJson returns a marshaled json object with content type 'application/json'.
 // This is usually used for responding to AJAX requests.
-func (c *Controller) renderJson(model interface{}) { // TODO make private
+func (c *Controller) renderJson(model interface{}) {
 	if c.stopped {
 		return
 	}
@@ -198,7 +198,7 @@ func (c *Controller) Index() {
 	c.Say(`Welcome to gomvc! Define your own Index action:
 
     type Home struct {
-        gomvc.Controller
+        *gomvc.Controller
     }
 
     func (c *Home) Index() {
@@ -235,12 +235,13 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 	for key, _ := range c.Request.PostForm {
 		c.Form[strings.ToLower(key)] = c.Request.PostForm.Get(key)
 	}
-	// Flash TODO move to session
-	c.FlashMsg = c.GetCookie("gomvc_flash")
-	c.SetCookie("gomvc_flash", "")
 	// Session
 	c.gorillaSession, _ = cookieStore.Get(c.Request, sessionId)
-	c.Session = c.gorillaSession.Values
+	c.Session = make(map[string]string, 0)
+	for key, val := range c.gorillaSession.Values {
+		c.Session[fmt.Sprintf("%v", key)] = fmt.Sprintf("%v", val)
+	}
+	c.FlashMsg = c.Session["gomvc_flash"]
 }
 
 func (c *Controller) checkMethodType() bool {
@@ -335,5 +336,8 @@ func (c *Controller) argToValue(stringValue string, argType reflect.Type) reflec
 
 func (c *Controller) cleanUp() {
 	// Save session
+	for key, val := range c.Session {
+		c.gorillaSession.Values[key] = val
+	}
 	c.gorillaSession.Save(c.Request, c.Out)
 }
