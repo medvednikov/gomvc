@@ -14,11 +14,6 @@ import (
 )
 
 var (
-	// Debug is used to determine how to display error messages. Default is
-	// true, set to false when deploying. One of the easy ways to do that
-	// automatically is to parse machine's hostname.
-	isDev bool = true
-
 	// Gorilla router. Used for parsing url variables like /member/{id}
 	router *mux.Router = mux.NewRouter()
 
@@ -33,41 +28,41 @@ var (
 
 	cookieStore *sessions.CookieStore
 
-	assetFunc func(string) ([]byte, error)
-
-	sessionId     string
-	sessionSecret string
+	config *Config
 )
 
 type Config struct {
-	Port       string
-	IsDev      bool
-	AssetFunc  func(string) ([]byte, error)
-	AssetNames []string
+	// IsDev is used to determine how to display error messages. Default is
+	// true, set to false when deploying. One of the easy ways to do that
+	// automatically is to parse machine's hostname.
+	IsDev bool
 
-	SessionId     string
+	Port      string
+	AssetFunc func(string) ([]byte, error)
+
+	DelimLeft  string
+	DelimRight string
+
+	SessionID     string
 	SessionSecret string
 }
 
-// Run initializes starts the web server
-func Run(config *Config) {
+// Run initializes and starts the web server
+func Run(c *Config) {
+	config = c
 	fmt.Println("Starting a gomvc app on port ", config.Port,
 		" with isdev=", config.IsDev)
-	isDev = config.IsDev
-	assetFunc = config.AssetFunc
-	sessionId = config.SessionId
-	if sessionId == "" {
-		sessionId = "gomvc_session"
+	if config.SessionID == "" {
+		config.SessionID = "gomvc_session"
 	}
-	sessionSecret = config.SessionSecret
 	TimeStamp = time.Now().Unix()
 	getActionsFromSourceFiles()
-	cookieStore = sessions.NewCookieStore([]byte(sessionSecret))
+	cookieStore = sessions.NewCookieStore([]byte(config.SessionSecret))
 	cookieStore.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 30, // Default session lasts 30 days
-		HttpOnly: true,       // Do not allow the cookie to be read from JS
-		Secure:   !isDev,     // Use secure store in production only
+		MaxAge:   86400 * 30,    // Default session lasts 30 days
+		HttpOnly: true,          // Do not allow the cookie to be read from JS
+		Secure:   !config.IsDev, // Use secure store in production only
 	}
 	http.Handle("/", router)
 	if config.Port != "" {
@@ -82,7 +77,7 @@ func Run(config *Config) {
 func GetHandler(obj interface{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Show a general error message on production
-		if !isDev {
+		if !config.IsDev {
 			defer func() {
 				if r := recover(); r != nil {
 					// TODO Custom error templates

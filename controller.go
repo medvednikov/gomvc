@@ -57,41 +57,42 @@ func (c *Controller) Render(data interface{}) {
 		return
 	}
 	c.cleanUp()
-	t := template.New("root").Funcs(defaultFuncs).Funcs(c.CustomTemplateFuncs)
+	t := template.New("root").
+		Delims(config.DelimLeft, config.DelimRight).
+		Funcs(defaultFuncs).
+		Funcs(c.CustomTemplateFuncs)
+	// A helper function for logging errors
+	showError := func(msg string, err error) {
+		log.Println(msg, err)
+		if config.IsDev {
+			c.Write(msg, err)
+		}
+	}
 	// Parse layout file with all subtemplates first
 	_, err := t.New("layout.html").Parse(readTemplate("layout.html"))
 	if err != nil {
-		log.Println("Layout template parsing error", err)
-		if isDev {
-			c.Write("Layout template parsing error", err)
-		}
+		showError("Layout template parsing error", err)
 		return
 	}
 	// Parse the local layout template
 	localLayout := c.ControllerName + "/_layout.html"
 	_, err = t.New(localLayout).Parse(readTemplate(localLayout))
 	if err != nil {
-		log.Println("Local layout template parsing error", err)
-		if isDev {
-			c.Write("Local layout template parsing error", err)
-		}
+		showError("Local layout template parsing error", err)
 		return
 	}
 	// Now parse the actual template file corresponding to the action
 	path := c.ControllerName + "/" + stripMethodType(c.ActionName) + ".html"
 	_, err = t.New(path).Parse(readTemplate(path))
 	if err != nil {
-		log.Println("Template parsing error", err)
-		if isDev {
-			c.Write("Template parsing error", err)
-		}
+		showError("Template parsing error", err)
 		return
 	}
 	// Finally, execute it
 	err = t.ExecuteTemplate(c.Out, path, data)
 	if err != nil {
 		log.Println("Template execution error:", err)
-		if isDev {
+		if config.IsDev {
 			c.Write("Template execution error:", err)
 		}
 		return
@@ -236,7 +237,7 @@ func (c *Controller) InitValues(w http.ResponseWriter, r *http.Request) {
 		c.Form[strings.ToLower(key)] = c.Request.PostForm.Get(key)
 	}
 	// Session
-	c.gorillaSession, _ = cookieStore.Get(c.Request, sessionId)
+	c.gorillaSession, _ = cookieStore.Get(c.Request, config.SessionID)
 	c.Session = make(map[string]string, 0)
 	for key, val := range c.gorillaSession.Values {
 		c.Session[fmt.Sprintf("%v", key)] = fmt.Sprintf("%v", val)
@@ -260,7 +261,7 @@ func (c *Controller) checkMethodType() bool {
 func runMethod(method reflect.Value, c *Controller) {
 	if !method.IsValid() {
 		http.NotFound(c.Out, c.Request)
-		if isDev {
+		if config.IsDev {
 			c.Write("Unknown action '" + c.ActionName +
 				"' (controller: '" + c.ControllerName + "')")
 		}

@@ -12,7 +12,7 @@ import (
 // getActionsFromSourceFiles parses all controller source files and fetches
 // data about action functions
 func getActionsFromSourceFiles() {
-	if !isDev {
+	if !config.IsDev {
 		return
 	}
 	ActionArgs = make(map[string]map[string][]string, 0)
