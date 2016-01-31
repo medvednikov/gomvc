@@ -3,6 +3,7 @@ package gomvc
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -19,7 +20,7 @@ func getActionsFromSourceFiles() {
 	curdir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	files, err := ioutil.ReadDir("c/")
 	if err != nil {
-		panic(`
+		log.Fatal(`
 Can't find the controllers directory in debug mode.
 Make sure you are running the application from the directory where it's located
 Current directory: ` + curdir)
