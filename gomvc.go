@@ -60,9 +60,10 @@ func Run(c *Config) {
 	cookieStore = sessions.NewCookieStore([]byte(config.SessionSecret))
 	cookieStore.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 30,    // Default session lasts 30 days
-		HttpOnly: true,          // Do not allow the cookie to be read from JS
-		Secure:   !config.IsDev, // Use secure store in production only
+		MaxAge:   86400 * 30, // Default session lasts 30 days
+		HttpOnly: true,       // Do not allow the cookie to be read from JS
+		//Secure:   !config.IsDev, // Use secure store in production only
+		Secure: false,
 	}
 	http.Handle("/", router)
 	if config.Port != "" {

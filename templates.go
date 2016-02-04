@@ -65,7 +65,7 @@ var defaultFuncs = template.FuncMap{
 func readTemplate(path string) string {
 	if !config.IsDev && config.AssetFunc != nil {
 		b, err := config.AssetFunc(path)
-		if err != nil {
+		if err != nil && !strings.HasSuffix(path, "layout.html") {
 			log.Println("Asset error", err)
 			return ""
 		}
@@ -101,7 +101,8 @@ func convertTemplate(b []byte) string {
 	// @$variable
 	rreplace(`@([\$][0-9a-zA-Z\.]+)`, "{{$1}}")
 	// @func arg1 arg2
-	rreplace(`@([a-z][a-zA-Z\.]+( "[^"]+")*)`, "{{ $1 }}")
+	rreplace(`[^\\]@([a-z][a-zA-Z\.]+( "[^"]+")*)`, "{{ $1 }}")
+	rreplace(`\\@`, `@`)
 	// %translation_key
 	rreplace("%([a-zA-Z_0-9]+)", `{{ T "$1" }}`)
 	return s
